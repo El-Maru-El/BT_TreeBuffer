@@ -16,13 +16,17 @@ FILE_EXTENSION = ''
 
 
 def generate_new_nodes_dir():
-    new_dir_name = NODE_STRING + get_current_timestamp()
+    new_dir_name = nodes_dir_name_from_timestamp(get_current_timestamp())
     new_node_dir = Path(os.path.join(NODES_DIR, new_dir_name))
     buffer_dir_for_node = get_buffer_dir_for_node(new_node_dir)
 
     buffer_dir_for_node.mkdir(parents=True, exist_ok=False)
 
     return new_node_dir
+
+
+def nodes_dir_name_from_timestamp(timestamp):
+    return NODE_STRING + timestamp
 
 
 def get_buffer_dir_for_node(node_dir):
@@ -38,7 +42,11 @@ def delete_all_nodes():
 
 
 def generate_buffer_file_name():
-    return BLOCK_STRING+get_current_timestamp()
+    return buffer_file_name_from_timestamp(get_current_timestamp())
+
+
+def buffer_file_name_from_timestamp(timestamp):
+    return BLOCK_STRING + timestamp()
 
 
 def write_buffer_block(file_path, elements):
