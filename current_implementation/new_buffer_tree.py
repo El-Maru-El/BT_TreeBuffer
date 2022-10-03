@@ -63,8 +63,8 @@ class BufferTree:
                 self.clear_all_full_buffers()
 
     def clear_all_full_buffers(self):
-        # TODO
-        pass
+        self.clear_full_internal_buffers()
+        self.clear_full_leaf_buffers()
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
@@ -72,6 +72,28 @@ class BufferTree:
             node = load_node(node_path, parent_path)
             node.clear_internal_buffer()
             write_node(node)
+
+    def clear_full_leaf_buffers(self):
+        while self.leaf_node_emptying_queue:
+            node_path, parent_path = self.leaf_node_emptying_queue.pop(0)
+            node = load_node(node_path, parent_path)
+
+            num_children_before = node.children_paths
+
+            node.clear_leaf_buffer()
+
+            num_children_after = node.children_paths
+
+            if num_children_after > num_children_before:
+                # TODO
+                pass
+            elif num_children_after < num_children_before:
+                # TODO
+                pass
+            else:
+                # Amount of children before equals amount of children afterwards, so no re-balancing required
+                # TODO
+                pass
 
 
 class TreeNode:
@@ -107,6 +129,7 @@ class TreeNode:
     def add_elements_to_buffer(self, parent_path, elements):
         # TODO
         tree = BufferTree.tree_instance
+
         # TODO get last buffer file header (just size)
         # TODO append to that buffer until it is full, partition the other elements to other new buffers
 
@@ -145,6 +168,10 @@ class TreeNode:
             self.pass_elements_to_children(elements)
             # TODO Delete not anymore needed buffer block files
             # Delete block-files from blocks_to_read
+        pass
+
+    def clear_leaf_buffer(self):
+        # TODO
         pass
 
     def pass_elements_to_children(self, elements):
@@ -231,6 +258,9 @@ class Action(str, Enum):
     DELETE = 'd'
     EXISTENT = 'e'
 
+
+# Node structure ideas:
+# is_internal_node, num_handles, handles, num_children, paths_to_children, num_buffer_blocks, paths_to_buffer_blocks
 
 def load_node(node_dir_path, parent_path=None) -> TreeNode:
     # TODO
