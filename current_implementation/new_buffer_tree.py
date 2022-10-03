@@ -78,21 +78,13 @@ class BufferTree:
             node_path, parent_path = self.leaf_node_emptying_queue.pop(0)
             node = load_node(node_path, parent_path)
 
-            num_children_before = node.children_paths
+            requires_deleting = node.clear_leaf_buffer()
 
-            node.clear_leaf_buffer()
-
-            num_children_after = node.children_paths
-
-            if num_children_after > num_children_before:
-                # TODO
-                pass
-            elif num_children_after < num_children_before:
+            if requires_deleting:
                 # TODO
                 pass
             else:
-                # Amount of children before equals amount of children afterwards, so no re-balancing required
-                # TODO
+                # TODO Does anything have to be done? Don't think so not sure yet though
                 pass
 
 
@@ -171,8 +163,21 @@ class TreeNode:
         pass
 
     def clear_leaf_buffer(self):
-        # TODO
-        pass
+        required_delete_from_outside = False
+        num_children_before = len(self.children_paths)
+
+        # TODO Sort all buffer files into one big file
+        sorted_file = ''
+
+
+
+
+
+
+        return required_delete_from_outside
+
+    def chunks_of_data
+
 
     def pass_elements_to_children(self, elements):
         # Slightly complicated implementation, but therefore does not use unnecessary memory space
