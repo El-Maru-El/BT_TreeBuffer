@@ -180,13 +180,16 @@ class TreeNode:
 
             line = file.readline()
 
-
             while True:
+                break_condition = False
 
                 if not line:
                     # TODO
                     pass
                 buffer_element = buffer_element_from_sorted_file_line(line)
+
+                if break_condition:
+                    break
 
         return required_delete_from_outside
 
