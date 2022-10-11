@@ -50,7 +50,7 @@ class BufferTree:
     def insert_to_tree(self, ele):
         self.tree_buffer.insert_new_element(ele, Action.INSERT)
         if self.tree_buffer.is_full():
-            # TODO This could be done more efficiently, since this Block is first written then immediately read again.
+            # TODO This could be done more efficiently, since this Block is first written then immediately read again if buffer is full
             root = load_node(self.tree_buffer)
             root.add_block_to_buffer(self.tree_buffer.get_elements())
             root.last_buffer_size = self.b
