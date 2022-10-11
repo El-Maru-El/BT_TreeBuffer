@@ -50,11 +50,6 @@ def get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp):
     return Path(os.path.join(get_node_dir_path_from_timestamp(node_timestamp), buffer_file_name_from_timestamp(buffer_timestamp)))
 
 
-def write_buffer_block(file_path, elements):
-    # TODO
-    pass
-
-
 # Returns leaf file name
 def leaf_file_name_from_timestamp(timestamp):
     return LEAF_STRING + timestamp()

@@ -178,7 +178,6 @@ class TreeNode:
 
             self.get_leaf_elements_as_list()
 
-
             line = file.readline()
 
 
@@ -216,7 +215,7 @@ class TreeNode:
         leaf_elements = []
         for child in self.children_paths:
             child_path = get_leaf_file_path_from_timestamps(self.node_timestamp, child)
-
+            # TODO What to do now?
         pass
 
     @staticmethod
