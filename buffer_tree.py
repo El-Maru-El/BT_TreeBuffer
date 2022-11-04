@@ -52,7 +52,7 @@ class BufferTree:
 
 
 class TreeNode:
-    def __init__(self, tree, is_internal_node, parent):
+    def __init__(self, tree, is_internal_node, parent=None):
         self.tree = tree
         self.is_internal_node = is_internal_node
         self.parent = parent
