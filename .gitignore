@@ -1,4 +1,5 @@
 # Default ignored files
 testing.py
+*nodes_collection*
 *.pyc
 *.txt
