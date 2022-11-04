@@ -35,6 +35,63 @@ def blabla_all_lines_generator():
     print(f'Execution time all lines: {end - start}')
 
 
-if __name__ == '__main__':
+def compare_file_generators():
     blabla_line_by_line_generator()
     blabla_all_lines_generator()
+
+
+def read_directly_line_by_line():
+    start = time.time()
+    file_path = r'C:\Users\marua\PycharmProjects\BT_TreeBuffer\blabla_all_lines.txt'
+
+    counter = 0
+    for line in open(file_path, 'r'):
+        counter += len(line)
+
+    print(counter)
+    end = time.time()
+    return end - start
+
+
+def read_then_line_by_line():
+    start = time.time()
+
+    file_path = r'C:\Users\marua\PycharmProjects\BT_TreeBuffer\blabla_all_lines.txt'
+    with open(file_path, 'r') as f:
+        data = f.readlines()
+
+    counter = 0
+    for line in data:
+        counter += len(line)
+
+    print(counter)
+    end = time.time()
+    return end - start
+
+
+def as_then_directly_iterate():
+    start = time.time()
+
+    file_path = r'C:\Users\marua\PycharmProjects\BT_TreeBuffer\blabla_all_lines.txt'
+    counter = 0
+    with open(file_path, 'r') as f:
+        for line in f:
+            counter += len(line)
+
+    print(counter)
+    end = time.time()
+    return end - start
+
+
+def compare_file_readers():
+    first = read_directly_line_by_line()
+    # second = read_then_line_by_line()
+    third = as_then_directly_iterate()
+
+    print(f'First duration: {first}')
+    # print(f'Second duration: {second}')
+    print(f'Third duration: {third}')
+
+
+if __name__ == '__main__':
+    compare_file_generators()
