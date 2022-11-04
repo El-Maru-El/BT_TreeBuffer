@@ -8,6 +8,7 @@ import shutil
 WORKING_DIR = os.path.dirname(current_implementation.__file__)
 NODES_DIR = os.path.join(WORKING_DIR, 'nodes_collection')
 NODE_STRING = 'node_'
+NODE_INFORMATION_FILE_STRING = 'data'
 TIMESTAMP_FORMAT = '%Y_%m_%d-%H_%M_%S_%f'
 BLOCK_STRING = 'block_'
 LEAF_STRING = 'leaf_'
@@ -34,6 +35,11 @@ def get_node_dir_path_from_timestamp(node_timestamp):
 # Returns Node directory name
 def nodes_dir_name_from_timestamp(timestamp):
     return NODE_STRING + timestamp
+
+
+# Returns node meta information file path
+def node_information_file_path_from_timestamp(timestamp):
+    return nodes_dir_name_from_timestamp(timestamp) + NODE_INFORMATION_FILE_STRING
 
 
 def get_current_timestamp():
@@ -70,3 +76,9 @@ def traverse_lists_in_list(super_list):
 
 def delete_all_nodes():
     shutil.rmtree(NODES_DIR)
+
+
+# String representations of node and buffer elements:
+IS_INTERNAL_STR = 'T'
+IS_NOT_INTERNAL_STR = 'F'
+SEP = ';'

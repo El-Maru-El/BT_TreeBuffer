@@ -91,7 +91,7 @@ class BufferTree:
 
 
 class TreeNode:
-    def __init__(self, node_timestamp=None, is_internal_node=None, handles=None, children=None, buffer_blocks=None, last_buffer_size=0):
+    def __init__(self, node_timestamp=None, is_internal_node=None, handles=None, children=None, buffer_blocks=None, last_buffer_size=0, parent_timestamp=None):
         if node_timestamp is None:
             node_timestamp = generate_new_nodes_dir()
 
@@ -103,8 +103,9 @@ class TreeNode:
         self.handles = handles
         self.children_paths = children
         self.is_intern = is_internal_node
-        self.buffer_blocks = buffer_blocks
+        self.buffer_block_timestamps = buffer_blocks
         self.last_buffer_size = last_buffer_size
+        self.parent_timestamp = parent_timestamp
 
     def is_internal_node(self):
         if self.is_intern is None:
@@ -114,10 +115,9 @@ class TreeNode:
 
     def add_block_to_buffer(self, elements):
         buffer_timestamp = get_current_timestamp()
-        file_path = get_buffer_file_path_from_timestamps(self.node_timestamp, buffer_timestamp)
 
-        self.buffer_blocks.append(buffer_timestamp)
-        write_buffer_block(file_path, elements)
+        self.buffer_block_timestamps.append(buffer_timestamp)
+        write_buffer_block(self.node_timestamp, buffer_timestamp, elements)
 
     def add_elements_to_buffer(self, parent_path, elements):
         # TODO
@@ -143,7 +143,7 @@ class TreeNode:
         else:
             limit = tree.m // 2
 
-        return len(self.buffer_blocks) > limit
+        return len(self.buffer_block_timestamps) > limit
 
     def is_root(self):
         return BufferTree.tree_instance.root == self.node_timestamp
@@ -151,15 +151,17 @@ class TreeNode:
     def clear_internal_buffer(self):
         read_size = BufferTree.tree_instance.m
 
-        while self.buffer_blocks:
-            blocks_to_read = self.buffer_blocks[:read_size]
-            self.buffer_blocks = self.buffer_blocks[read_size:]
+        while self.buffer_block_timestamps:
+            blocks_to_read = self.buffer_block_timestamps[:read_size]
+            self.buffer_block_timestamps = self.buffer_block_timestamps[read_size:]
 
-            elements = list(chain.from_iterable([read_buffer_block(block_path).elements for block_path in blocks_to_read]))
+            elements = []
+            [elements.extend(read_buffer_block_elements(self.node_timestamp, block_timestamp)) for block_timestamp in blocks_to_read]
             elements.sort(key=lambda e: (e.key, e.timestamp))
 
             TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
             self.pass_elements_to_children(elements)
+
             # TODO Delete not anymore needed buffer block files
             # Delete block-files from blocks_to_read
         pass
@@ -289,27 +291,84 @@ class Action(str, Enum):
 
 
 # Node structure ideas:
-# is_internal_node, num_handles, handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
+# is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
 
-def load_node(node_dir_path, parent_path=None) -> TreeNode:
-    # TODO
-    pass
+def load_node(node_timestamp, parent_timestamp=None) -> TreeNode:
+    file_path = node_information_file_path_from_timestamp(node_timestamp)
+    with open(file_path, 'r') as f:
+        data = f.read()
+
+    index = 0
+    if data[0] == IS_INTERNAL_STR:
+        is_internal_node = True
+    else:
+        is_internal_node = False
+
+    index = 2
+    num_handles = int(data[1])
+    handles = data[index:index+num_handles]
+    index += num_handles
+
+    num_children = int(data[index])
+    children_timestamps = data[index+1: index+1+num_children]
+    index += 1 + num_children
+
+    num_buffer_blocks = int(data[index])
+    paths_to_buffer_blocks = data[index+1: index+1+num_buffer_blocks]
+    index += 1 + num_buffer_blocks
+
+    last_buffer_size = int(data[index])
+
+    node_instance = TreeNode(
+        node_timestamp=node_timestamp,
+        is_internal_node=is_internal_node,
+        handles=handles,
+        children=children_timestamps,
+        buffer_blocks=paths_to_buffer_blocks,
+        last_buffer_size=last_buffer_size,
+        parent_timestamp=parent_timestamp
+    )
+    return node_instance
 
 
 def write_node(node: TreeNode):
-    # TODO
-    pass
+    if node.is_internal_node():
+        is_internal_string = IS_INTERNAL_STR
+    else:
+        is_internal_string = IS_NOT_INTERNAL_STR
+
+    raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_paths), *node.children_paths, len(node.buffer_block_timestamps), *node.buffer_block_timestamps, node.last_buffer_size]
+    str_list = [str(elem) for elem in raw_list]
+
+    output_string = SEP.join(str_list)
+
+    file_path = node_information_file_path_from_timestamp(node.node_timestamp)
+
+    with open(file_path, 'w') as f:
+        f.write(output_string)
 
 
-def read_buffer_block(block_path) -> NodeBufferBlock:
-    buffer_block = NodeBufferBlock()
-    # TODO
-    return buffer_block
+# Buffer Block Structure:
+# Each line: Element;Timestamp;Action
+def read_buffer_block_elements(node_timestamp, block_timestamp):
+    block_filepath = get_buffer_file_path_from_timestamps(node_timestamp, block_timestamp)
+
+    # The line splitting [:-1] on action gets rid of the line break
+    with open(block_filepath, 'r') as f:
+        elements = []
+        for line in f:
+            [element, action_timestamp, action] = line.split(sep=SEP)
+            elements.append(BufferElement(element, action[:-1], action_timestamp))
+
+    return elements
 
 
-def write_buffer_block(file_path, elements):
-    # TODO
-    pass
+def write_buffer_block(node_timestamp, buffer_timestamp, elements):
+    buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+
+    with open(buffer_filepath, 'w') as f:
+        elements_as_str = [f'{element.key}{SEP}{element.timestamp}{SEP}{element.action}\n' for element in elements]
+        f.writelines(elements_as_str)
 
 
 # https://stackoverflow.com/questions/17444679/reading-a-huge-csv-file
