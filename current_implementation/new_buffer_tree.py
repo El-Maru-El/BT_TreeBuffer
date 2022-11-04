@@ -98,6 +98,12 @@ class TreeNode:
         if buffer_blocks is None:
             buffer_blocks = []
 
+        if handles is None:
+            handles = []
+
+        if children is None:
+            children = []
+
         self.node_timestamp = node_timestamp
 
         self.handles = handles
@@ -296,9 +302,8 @@ class Action(str, Enum):
 def load_node(node_timestamp, parent_timestamp=None) -> TreeNode:
     file_path = node_information_file_path_from_timestamp(node_timestamp)
     with open(file_path, 'r') as f:
-        data = f.read()
+        data = f.read().split(SEP)
 
-    index = 0
     if data[0] == IS_INTERNAL_STR:
         is_internal_node = True
     else:
