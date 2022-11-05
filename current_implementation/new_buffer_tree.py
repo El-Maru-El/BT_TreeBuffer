@@ -47,6 +47,13 @@ class BufferTree:
 
     def insert_to_tree(self, ele):
         self.tree_buffer.insert_new_element(ele, Action.INSERT)
+        self.check_tree_buffer()
+    
+    def delete_from_tree(self, ele):
+        self.tree_buffer.insert_new_element(ele, Action.DELETE)
+        self.check_tree_buffer()
+
+    def check_tree_buffer(self):
         if self.tree_buffer.is_full():
             # TODO This could be done more efficiently, since this Block is first written then immediately read again if buffer is full
             root = load_node(self.tree_buffer)
