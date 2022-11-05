@@ -48,7 +48,7 @@ def get_current_timestamp():
 
 # Returns buffer file name
 def buffer_file_name_from_timestamp(timestamp):
-    return BLOCK_STRING + timestamp()
+    return BLOCK_STRING + timestamp
 
 
 # Returns buffer file path

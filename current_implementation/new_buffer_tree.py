@@ -48,7 +48,7 @@ class BufferTree:
     def insert_to_tree(self, ele):
         self.tree_buffer.insert_new_element(ele, Action.INSERT)
         self.check_tree_buffer()
-    
+
     def delete_from_tree(self, ele):
         self.tree_buffer.insert_new_element(ele, Action.DELETE)
         self.check_tree_buffer()
@@ -290,7 +290,10 @@ class BufferElement:
 
         self.element = element
         self.timestamp = timestamp
-        self.action = action
+        self.action = Action(action)
+
+    def __eq__(self, other):
+        return self.element == other.element and self.action == other.action and self.timestamp == other.timestamp
 
 
 @unique
@@ -377,7 +380,7 @@ def write_buffer_block(node_timestamp, buffer_timestamp, elements):
     buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
 
     with open(buffer_filepath, 'w') as f:
-        elements_as_str = [f'{element.key}{SEP}{element.timestamp}{SEP}{element.action}\n' for element in elements]
+        elements_as_str = [f'{element.element}{SEP}{element.timestamp}{SEP}{element.action}\n' for element in elements]
         f.writelines(elements_as_str)
 
 
