@@ -1,5 +1,5 @@
 # Default ignored files
-testing.py
+quick_test.py
 *nodes_collection*
 *.pyc
 *.txt
