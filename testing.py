@@ -3,6 +3,7 @@ import collections
 from current_implementation.constants_and_helpers import *
 from current_implementation.new_buffer_tree import *
 import unittest
+import time
 
 
 class TestBasicStructure(unittest.TestCase):
@@ -93,7 +94,7 @@ class TestBasicStructure(unittest.TestCase):
         reloaded_buffer_elements = read_buffer_block_elements(node_timestamp, fake_node.buffer_block_timestamps[0])
         self.assertEqual(reloaded_buffer_elements, starting_elements)
 
-    def test_add_elements_to_partially_filled_buffer(self):
+    def test_add_elements_to_partially_filled_bufferblock(self):
         tree = self.create_dummy_tree()
         B = tree.B
 
@@ -115,9 +116,32 @@ class TestBasicStructure(unittest.TestCase):
         self.assertEqual(reloaded_buffer_two, appending_elements[B // 2:])
         self.assertEqual(fake_node.last_buffer_size, B // 2)
 
+    def test_add_elements_to_full_bufferblock(self):
+        tree = self.create_dummy_tree()
+        B = tree.B
+
+        fake_node = TreeNode(is_internal_node=False)
+        node_timestamp = fake_node.node_timestamp
+
+        starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B)]
+        fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
+
+        appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
+        fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
+
+        self.assertEqual(len(fake_node.buffer_block_timestamps), 2)
+        self.assertEqual(fake_node.last_buffer_size, B)
+        reloaded_buffer_one = read_buffer_block_elements(node_timestamp, fake_node.buffer_block_timestamps[0])
+        reloaded_buffer_two = read_buffer_block_elements(node_timestamp, fake_node.buffer_block_timestamps[1])
+
+        self.assertEqual(reloaded_buffer_one, starting_elements)
+        self.assertEqual(reloaded_buffer_two, appending_elements)
+
     @staticmethod
     def create_dummy_tree():
         M = 2 * 4096
         B = 1024
 
-        return BufferTree(M=M, B=B)
+        tree = BufferTree(M=M, B=B)
+        time.sleep(0.1)
+        return tree
