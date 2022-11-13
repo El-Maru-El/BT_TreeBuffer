@@ -55,7 +55,7 @@ class BufferTree:
     def check_tree_buffer(self):
         if self.tree_buffer.is_full():
             # TODO This could be done more efficiently, since this Block is first written then immediately read again if buffer is full
-            root = load_node(self.tree_buffer)
+            root = load_node(self.root)
             root.add_block_to_buffer(self.tree_buffer.get_elements())
             root.last_buffer_size = self.b
 
