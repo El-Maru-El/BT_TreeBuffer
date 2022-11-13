@@ -12,8 +12,7 @@ class BufferTree:
     """ Static reference to the tree. Useful for when calculating something for a node requires tree properties."""
     tree_instance = None
 
-    def __init__(self, N, M, B):
-        self.N = N
+    def __init__(self, M, B):
         self.M = M
         self.B = B
         m = M // B
