@@ -139,7 +139,7 @@ class TreeNode:
         tree = BufferTree.tree_instance
         # TODO get last buffer file header (just size)
         # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
-        if self.last_buffer_size < tree.B:
+        if self.buffer_block_timestamps and self.last_buffer_size < tree.B:
             # TODO
             elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
             append_to_buffer(self.node_timestamp, self.buffer_block_timestamps[-1], elements[:elements_to_add])
