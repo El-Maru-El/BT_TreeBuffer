@@ -75,7 +75,8 @@ def traverse_lists_in_list(super_list):
 
 
 def delete_all_nodes():
-    shutil.rmtree(NODES_DIR)
+    if os.path.exists(NODES_DIR):
+        shutil.rmtree(NODES_DIR)
 
 
 # String representations of node and buffer elements:
