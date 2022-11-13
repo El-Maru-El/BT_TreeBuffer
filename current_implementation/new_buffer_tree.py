@@ -57,7 +57,8 @@ class BufferTree:
             # TODO This could be done more efficiently, since this Block is first written then immediately read again if buffer is full
             root = load_node(self.root)
             root.add_block_to_buffer(self.tree_buffer.get_elements())
-            root.last_buffer_size = self.b
+            root.last_buffer_size = self.B
+            write_node(root)
 
             self.tree_buffer.clear_elements()
 
