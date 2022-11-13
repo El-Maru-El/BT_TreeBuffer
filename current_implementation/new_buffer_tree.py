@@ -132,13 +132,33 @@ class TreeNode:
 
     def add_elements_to_buffer(self, parent_path, elements):
         # TODO
-        tree = BufferTree.tree_instance
+        # If there are no elements, return
+        if not elements:
+            return
 
+        tree = BufferTree.tree_instance
         # TODO get last buffer file header (just size)
-        # TODO append to that buffer until it is full, partition the other elements to other new buffers
+        # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
+        if self.last_buffer_size < tree.B:
+            # TODO
+            elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
+            append_to_buffer(self.node_timestamp, self.buffer_block_timestamps[-1], elements[:elements_to_add])
+            self.last_buffer_size += elements_to_add
+            start_index = elements_to_add
+        else:
+            start_index = 0
+
+        while start_index < len(elements):
+            elements_to_add = min(len(elements) - start_index, tree.B)
+            buffer_timestamp = get_current_timestamp()
+            write_buffer_block(self.node_timestamp, buffer_timestamp, elements[start_index:start_index + elements_to_add])
+            self.buffer_block_timestamps.append(buffer_timestamp)
+
+            start_index += elements_to_add
+            self.last_buffer_size = elements_to_add
 
         if self.buffer_is_full():
-            # TODO We need to check first whether the node might already be in the queue
+            # TODO We need to check first whether the node might already be in the queue. Edit: Do we really need to check that? Is that possible?
             if self.is_internal_node():
                 tree.internal_node_emptying_queue.insert(0, ChildParent(self.node_timestamp, parent_path))
             else:
@@ -295,6 +315,9 @@ class BufferElement:
     def __eq__(self, other):
         return self.element == other.element and self.action == other.action and self.timestamp == other.timestamp
 
+    def to_output_string(self):
+        return f'{self.element}{SEP}{self.timestamp}{SEP}{self.action}\n'
+
 
 @unique
 class Action(str, Enum):
@@ -306,7 +329,6 @@ class Action(str, Enum):
 
 # Node structure ideas:
 # is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
-
 def load_node(node_timestamp, parent_timestamp=None) -> TreeNode:
     file_path = node_information_file_path_from_timestamp(node_timestamp)
     with open(file_path, 'r') as f:
@@ -380,16 +402,15 @@ def write_buffer_block(node_timestamp, buffer_timestamp, elements):
     buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
 
     with open(buffer_filepath, 'w') as f:
-        elements_as_str = [f'{element.element}{SEP}{element.timestamp}{SEP}{element.action}\n' for element in elements]
+        elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)
 
 
-# https://stackoverflow.com/questions/17444679/reading-a-huge-csv-file
-def chunks_of_data(data, chunk_size):
-    # TODO len(data) doesn't work on data from a csv reader. Need a slightly different approach if we want to read x lines
-
-    for i in range(0, chunk_size):
-        yield data[i: i+chunk_size]
+def append_to_buffer(node_timestamp, buffer_timestamp, elements):
+    buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+    with open(buffer_filepath, 'a') as f:
+        elements_as_str = [element.to_output_string() for element in elements]
+        f.writelines(elements_as_str)
 
 
 def buffer_element_from_sorted_file_line(line):
@@ -398,3 +419,13 @@ def buffer_element_from_sorted_file_line(line):
     action = 'insert'
 
     return BufferElement(ele, action, with_time=False)
+
+
+
+#
+# # https://stackoverflow.com/questions/17444679/reading-a-huge-csv-file
+# def chunks_of_data(data, chunk_size):
+#     # TODO len(data) doesn't work on data from a csv reader. Need a slightly different approach if we want to read x lines
+#
+#     for i in range(0, chunk_size):
+#         yield data[i: i+chunk_size]
