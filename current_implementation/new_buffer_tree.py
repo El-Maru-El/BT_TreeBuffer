@@ -3,6 +3,7 @@ from enum import unique, Enum
 
 from current_implementation.constants_and_helpers import *
 from collections import namedtuple
+from current_implementation.double_linked_list import DoublyLinkedList
 
 ChildParent = namedtuple('ChildParent', field_names=['child', 'parent'])
 
@@ -30,7 +31,7 @@ class BufferTree:
         self.root = root_node.node_timestamp
         self.tree_buffer = TreeBuffer(max_size=self.B)
         self.internal_node_emptying_queue = []
-        self.leaf_node_emptying_queue = []
+        self.leaf_node_emptying_queue = DoublyLinkedList()
 
         BufferTree.tree_instance = self
         write_node(root_node)
@@ -75,15 +76,15 @@ class BufferTree:
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
-            node_path, parent_path = self.internal_node_emptying_queue.pop(0)
-            node = load_node(node_path, parent_path)
+            node_timestamp, parent_timestamp = self.internal_node_emptying_queue.pop(0)
+            node = load_node(node_timestamp, parent_timestamp)
             node.clear_internal_buffer()
             write_node(node)
 
     def clear_full_leaf_buffers(self):
-        while self.leaf_node_emptying_queue:
-            node_path, parent_path = self.leaf_node_emptying_queue.pop(0)
-            node = load_node(node_path, parent_path)
+        while not self.leaf_node_emptying_queue.is_empty():
+            node_timestamp, parent_timestamp = self.leaf_node_emptying_queue.pop_first()
+            node = load_node(node_timestamp, parent_timestamp)
 
             requires_deleting = node.clear_leaf_buffer()
 
@@ -353,6 +354,7 @@ def load_node(node_timestamp, parent_timestamp=None) -> TreeNode:
     index += 1 + num_buffer_blocks
 
     last_buffer_size = int(data[index])
+    index += 1
 
     node_instance = TreeNode(
         node_timestamp=node_timestamp,
