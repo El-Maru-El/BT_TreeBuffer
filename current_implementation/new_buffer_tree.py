@@ -194,9 +194,8 @@ class TreeNode:
             TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
             self.pass_elements_to_children(elements)
 
-            # TODO Delete not anymore needed buffer block files
-            # Delete block-files from blocks_to_read
-        pass
+            for block_timestamp in blocks_to_read:
+                delete_buffer_file_with_timestamp(self.node_timestamp, block_timestamp)
 
     def clear_leaf_buffer(self):
         tree = BufferTree.tree_instance
