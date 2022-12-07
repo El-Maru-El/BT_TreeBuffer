@@ -79,6 +79,11 @@ def delete_all_nodes():
         shutil.rmtree(NODES_DIR)
 
 
+def delete_buffer_file_with_timestamp(node_timestamp, buffer_timestamp):
+    buffer_file_path = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+    os.remove(buffer_file_path)
+
+
 # String representations of node and buffer elements:
 IS_INTERNAL_STR = 'T'
 IS_NOT_INTERNAL_STR = 'F'
