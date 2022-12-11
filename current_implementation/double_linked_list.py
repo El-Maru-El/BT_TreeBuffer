@@ -1,4 +1,4 @@
-# Double Linked List with special look up in O(1) (only works for ChildParent Tuple)
+# Double Linked List with special look up in O(1) that only works for ChildParent Tuple
 
 class DoublyLinkedList:
     def __init__(self):
@@ -10,20 +10,19 @@ class DoublyLinkedList:
     def is_empty(self):
         return self.num_elements == 0
 
-    # def prepend(self, child_parent):
-    #     old_root = self.root
-    #
-    #     new_list_elem = ListElement(child_parent, prev=None, following=self.root)
-    #     self.root = new_list_elem
-    #
-    #     if old_root:
-    #         old_root.prev = new_list_elem
-    #
-    #     self.map[child_parent.child] = new_list_elem
-    #     self.num_elements += 1
+    def prepend(self, child_parent):
+        old_root = self.root
+
+        new_list_elem = ListElement(child_parent, prev=None, following=self.root)
+        self.root = new_list_elem
+
+        if old_root:
+            old_root.prev = new_list_elem
+
+        self.map[child_parent.child] = new_list_elem
+        self.num_elements += 1
 
     def append(self, child_parent):
-        # TODO Check whether the element is already present in here (Can happen if an internal node has emptied itself several times into the same child, which is a Leaf Node)
         old_last = self.last
 
         new_list_elem = ListElement(child_parent, prev=self.last, following=None)
