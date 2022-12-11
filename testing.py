@@ -160,7 +160,11 @@ class TestBasicStructure(unittest.TestCase):
 
         reloaded_buffer_one = read_buffer_block_elements(node_timestamp, fake_node.buffer_block_timestamps[0])
         reloaded_buffer_two = read_buffer_block_elements(node_timestamp, fake_node.buffer_block_timestamps[1])
-        self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:1])
+
+        failed_one = None
+        if fake_node.buffer_block_timestamps[0] == fake_node.buffer_block_timestamps[1]:
+            failed_one = 'Failed bc the same timestamp was used for both buffer files'
+        self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:1], failed_one)
         self.assertEqual(reloaded_buffer_two, appending_elements[1:])
 
     @staticmethod
