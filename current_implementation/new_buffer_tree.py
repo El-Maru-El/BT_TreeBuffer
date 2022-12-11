@@ -132,26 +132,34 @@ class TreeNode:
         write_buffer_block(self.node_timestamp, buffer_timestamp, elements)
 
     def add_elements_to_buffer(self, parent_path, elements):
+        # TODO
+        # If there are no elements, return
+        if not elements:
+            return
+
         tree = BufferTree.tree_instance
+        # TODO get last buffer file header (just size)
         # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
         if self.buffer_block_timestamps and self.last_buffer_size < tree.B:
-            self.fill_up_last_buffer_block(elements)
+            # TODO
+            elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
+            append_to_buffer(self.node_timestamp, self.buffer_block_timestamps[-1], elements[:elements_to_add])
+            self.last_buffer_size += elements_to_add
+            start_index = elements_to_add
+        else:
+            start_index = 0
 
-        # Little sanity check here
-        if self.last_buffer_size < tree.B and elements:
-            raise Exception(f"Add elements to buffer failed!! last_buffer_size is {self.last_buffer_size} and B is {tree.B}, but there are {len(elements)} elements left to be added")
-
-        start_index = 0
         while start_index < len(elements):
-            number_of_elements_to_add = min(len(elements) - start_index, tree.B)
+            elements_to_add = min(len(elements) - start_index, tree.B)
             buffer_timestamp = get_current_timestamp()
-            write_buffer_block(self.node_timestamp, buffer_timestamp, elements[start_index:start_index + number_of_elements_to_add])
+            write_buffer_block(self.node_timestamp, buffer_timestamp, elements[start_index:start_index + elements_to_add])
             self.buffer_block_timestamps.append(buffer_timestamp)
 
-            start_index += number_of_elements_to_add
-            self.last_buffer_size = number_of_elements_to_add
+            start_index += elements_to_add
+            self.last_buffer_size = elements_to_add
 
         if self.buffer_is_full():
+            # TODO We need to check first whether the node might already be in the queue. Edit: Do we really need to check that? Is that possible?
             if self.is_internal_node():
                 tree.internal_node_emptying_queue.insert(0, ChildParent(self.node_timestamp, parent_path))
             else:
@@ -178,7 +186,7 @@ class TreeNode:
         while self.buffer_block_timestamps:
             blocks_to_read = self.buffer_block_timestamps[:read_size]
             self.buffer_block_timestamps = self.buffer_block_timestamps[read_size:]
-            # TODO Now that we know that each Buffer-Block is always sorted and does not have duplicates
+
             elements = []
             [elements.extend(read_buffer_block_elements(self.node_timestamp, block_timestamp)) for block_timestamp in blocks_to_read]
             elements.sort(key=lambda e: (e.key, e.timestamp))
@@ -258,65 +266,6 @@ class TreeNode:
 
         for i in indices_to_del:
             del elements[i]
-
-    def fill_up_last_buffer_block(self, new_buffer_elements):
-        """ Modifies new_buffer_elements by deleting all elements in there that are written to the currently last buffer_block
-        Assumes there are no duplicates within a list. The two separate lists might have some elements in common
-        Sets the new self.last_buffer_size after it's done """
-        tree = BufferTree.tree_instance
-        buffer_timestamp = self.buffer_block_timestamps[-1]
-        old_buffer_elements = read_buffer_block_elements(self.node_timestamp, buffer_timestamp)
-
-        max_result_length = min(tree.B, self.last_buffer_size + len(new_buffer_elements))
-        merged_elements = self.iterative_merger(old_buffer_elements, new_buffer_elements, max_result_length)
-        # Can't be empty
-        write_buffer_block(self.node_timestamp, buffer_timestamp, merged_elements)
-        self.last_buffer_size = len(merged_elements)
-
-    @staticmethod
-    def iterative_merger(old_buffer_elements, new_elements, max_result_length):
-        """ Assumes both lists are sorted already.
-        Within a single list, there may be no duplicates, otherwise elimination of equal objects doesn't work. Result may be at most <counter> elements longer than buffer_elements was at start. """
-        result = []
-        while len(result) < max_result_length and new_elements and old_buffer_elements:
-            if old_buffer_elements[0].element < new_elements[0].element:
-                result.append(old_buffer_elements.pop(0))
-            elif old_buffer_elements[0].element > new_elements[0].element:
-                result.append(new_elements.pop(0))
-            else:
-                # Elements are equal, so pick the one with the newest timestamp and delete the other
-                buffer_elem = old_buffer_elements.pop(0)
-                new_elem = new_elements.pop(0)
-                if buffer_elem.timestamp > new_elem.timestamp:
-                    result.append(buffer_elem)
-                else:
-                    result.append(new_elem)
-
-        if len(result) == max_result_length:
-            # Just a little sanity check...
-            if old_buffer_elements:
-                failure_data = f"Old Buffer Elements left:\n{old_buffer_elements}\n" \
-                               f"New Elements left:\n{new_elements}\n" \
-                               f"Result: {len(result)} items, max could be {max_result_length}"
-                raise ValueError(f"Made a mistake in the iterative_merger you idiot!!!!\n{failure_data}")
-            # We are done, yay!
-            return result
-
-        if not old_buffer_elements:
-            num_elements_to_add = min(max_result_length - len(result), len(new_elements))
-            result.extend(new_elements[:num_elements_to_add])
-            del new_elements[:num_elements_to_add]
-            return result
-
-        if not new_elements:
-            # Just a little sanity check...
-            if len(result) + len(old_buffer_elements) > max_result_length:
-                failure_data = f"Old Buffer Elements left:\n{old_buffer_elements}\n" \
-                               f"New Elements left:\n{new_elements}\n" \
-                               f"Result: {len(result)} items, max could be {max_result_length}"
-                raise ValueError(f"Made a mistake in the iterative_merger you idiot!!!!\n{failure_data}")
-            result.extend(old_buffer_elements)
-            return result
 
 
 class TreeBuffer:
@@ -458,12 +407,20 @@ def write_buffer_block(node_timestamp, buffer_timestamp, elements):
         f.writelines(elements_as_str)
 
 
+def append_to_buffer(node_timestamp, buffer_timestamp, elements):
+    buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+    with open(buffer_filepath, 'a') as f:
+        elements_as_str = [element.to_output_string() for element in elements]
+        f.writelines(elements_as_str)
+
+
 def buffer_element_from_sorted_file_line(line):
     # TODO
     ele = 'ele'
     action = 'insert'
 
     return BufferElement(ele, action, with_time=False)
+
 
 
 #
