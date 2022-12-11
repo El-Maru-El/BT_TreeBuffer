@@ -138,7 +138,6 @@ class TreeNode:
             return
 
         tree = BufferTree.tree_instance
-        # TODO get last buffer file header (just size)
         # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
         if self.buffer_block_timestamps and self.last_buffer_size < tree.B:
             # TODO
