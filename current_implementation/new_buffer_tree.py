@@ -186,11 +186,7 @@ class TreeNode:
             blocks_to_read = self.buffer_block_timestamps[:read_size]
             self.buffer_block_timestamps = self.buffer_block_timestamps[read_size:]
 
-            elements = []
-            [elements.extend(read_buffer_block_elements(self.node_timestamp, block_timestamp)) for block_timestamp in blocks_to_read]
-            elements.sort(key=lambda e: (e.key, e.timestamp))
-
-            TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
+            elements = load_buffer_blocks_sort_and_remove_duplicates(self.node_timestamp, blocks_to_read)
             self.pass_elements_to_children(elements)
 
             for block_timestamp in blocks_to_read:
@@ -414,12 +410,25 @@ def append_to_buffer(node_timestamp, buffer_timestamp, elements):
 
 
 def buffer_element_from_sorted_file_line(line):
+
     # TODO
     ele = 'ele'
     action = 'insert'
 
     return BufferElement(ele, action, with_time=False)
 
+
+def load_buffer_blocks_sort_and_remove_duplicates(node_timestamp, buffer_timestamps):
+    elements = load_buffer_elements_from_path_files(node_timestamp, buffer_timestamps)
+    elements.sort(key=lambda e: (e.key, e.timestamp))
+    TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
+    return elements
+
+
+def load_buffer_elements_from_path_files(node_timestamp, buffer_timestamps):
+    elements = []
+    [elements.extend(read_buffer_block_elements(node_timestamp, block_timestamp)) for block_timestamp in buffer_timestamps]
+    return elements
 
 
 #
