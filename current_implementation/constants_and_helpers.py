@@ -119,3 +119,10 @@ def delete_sorted_file_with_timestamp(node_timestamp, sorted_timestamp):
 IS_INTERNAL_STR = 'T'
 IS_NOT_INTERNAL_STR = 'F'
 SEP = ';'
+
+
+def append_to_sorted_buffer_elements_file(node_timestamp, sorted_timestamp, elements: list):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+    with open(sorted_filepath, 'a') as f:
+        elements_as_str = [element.to_output_string() for element in elements]
+        f.writelines(elements_as_str)

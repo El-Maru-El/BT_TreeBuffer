@@ -1,8 +1,9 @@
 """ Contains the functionality to do an external merge sort on an arbitrary amount of files containing BufferElement.
 Assumes that the elements within EACH file passed are sorted and no file contains the same element more than once."""
 from collections import deque
+
 from current_implementation.constants_and_helpers import *
-from current_implementation.new_buffer_tree import get_buffer_elements_from_sorted_filereader, append_to_sorted_buffer_elements_file
+from current_implementation.buffer_element import get_buffer_elements_from_sorted_filereader
 
 
 def external_merge_sort_buffer_elements_many_files(node_timestamp, sorted_timestamps, max_elements):
