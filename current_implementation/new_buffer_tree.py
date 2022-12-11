@@ -4,6 +4,8 @@ from enum import unique, Enum
 from current_implementation.constants_and_helpers import *
 from collections import namedtuple
 from current_implementation.double_linked_list import DoublyLinkedList
+from current_implementation.merge_sort import external_merge_sort_buffer_elements_many_files
+from collections import deque
 
 ChildParent = namedtuple('ChildParent', field_names=['child', 'parent'])
 
@@ -132,15 +134,10 @@ class TreeNode:
         write_buffer_block(self.node_timestamp, buffer_timestamp, elements)
 
     def add_elements_to_buffer(self, parent_path, elements):
-        # TODO
-        # If there are no elements, return
-        if not elements:
-            return
-
         tree = BufferTree.tree_instance
         # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
         if self.buffer_block_timestamps and self.last_buffer_size < tree.B:
-            # TODO
+            # TODO Is this done? Think so!
             elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
             append_to_buffer(self.node_timestamp, self.buffer_block_timestamps[-1], elements[:elements_to_add])
             self.last_buffer_size += elements_to_add
@@ -180,17 +177,19 @@ class TreeNode:
         return BufferTree.tree_instance.root == self.node_timestamp
 
     def clear_internal_buffer(self):
-        read_size = BufferTree.tree_instance.m
+        read_size = BufferTree.tree_instance.m // 2
 
         while self.buffer_block_timestamps:
-            blocks_to_read = self.buffer_block_timestamps[:read_size]
-            self.buffer_block_timestamps = self.buffer_block_timestamps[read_size:]
-
-            elements = load_buffer_blocks_sort_and_remove_duplicates(self.node_timestamp, blocks_to_read)
+            elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
             self.pass_elements_to_children(elements)
 
-            for block_timestamp in blocks_to_read:
-                delete_buffer_file_with_timestamp(self.node_timestamp, block_timestamp)
+    def read_sort_and_remove_duplicates_from_buffer_files_with_read_size(self, read_size):
+        """ Read_size = How many files to read at once. Also deletes the buffer blocks from external memory and modifies self.buffer_block_timestamps. """
+        blocks_to_read = self.buffer_block_timestamps[:read_size]
+        self.buffer_block_timestamps = self.buffer_block_timestamps[read_size:]
+        delete_several_buffer_files_with_timestamps(self.node_timestamp, blocks_to_read)
+
+        return load_buffer_blocks_sort_and_remove_duplicates(self.node_timestamp, blocks_to_read)
 
     def clear_leaf_buffer(self):
         tree = BufferTree.tree_instance
@@ -198,10 +197,11 @@ class TreeNode:
         required_delete_from_outside = False
         num_children_before = len(self.children_paths)
 
-        sorted_file = ''
-        # TODO Sort all buffer files into one big file
-
-        with open(sorted_file, 'r') as file:
+        # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
+        sorted_timestamps = self.prepare_buffer_blocks_into_manageable_sorted_files()
+        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_timestamp, sorted_timestamps, tree.M)
+        # TODO Once file is sorted, do the rest of the work
+        with open(sorted_filepath, 'r') as file:
             new_leaf_block = []
 
             self.get_leaf_elements_as_list()
@@ -214,12 +214,24 @@ class TreeNode:
                 if not line:
                     # TODO
                     pass
-                buffer_element = buffer_element_from_sorted_file_line(line)
+                buffer_element = parse_line_into_buffer_element(line)
 
                 if break_condition:
                     break
 
         return required_delete_from_outside
+
+    def prepare_buffer_blocks_into_manageable_sorted_files(self):
+        read_size = BufferTree.tree_instance.m
+
+        sorted_timestamps = []
+        while self.buffer_block_timestamps:
+            elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
+            sorted_timestamp = get_current_timestamp()
+            append_to_sorted_buffer_elements_file(self.node_timestamp, sorted_timestamp, elements)
+            sorted_timestamps.append(sorted_timestamp)
+
+        return sorted_timestamps
 
     def pass_elements_to_children(self, elements):
         # Slightly complicated implementation, but therefore does not use unnecessary memory space
@@ -384,12 +396,10 @@ def write_node(node: TreeNode):
 def read_buffer_block_elements(node_timestamp, block_timestamp):
     block_filepath = get_buffer_file_path_from_timestamps(node_timestamp, block_timestamp)
 
-    # The line splitting [:-1] on action gets rid of the line break
     with open(block_filepath, 'r') as f:
         elements = []
         for line in f:
-            [element, action_timestamp, action] = line.split(sep=SEP)
-            elements.append(BufferElement(element, action[:-1], action_timestamp))
+            elements.append(parse_line_into_buffer_element(line))
 
     return elements
 
@@ -409,13 +419,10 @@ def append_to_buffer(node_timestamp, buffer_timestamp, elements):
         f.writelines(elements_as_str)
 
 
-def buffer_element_from_sorted_file_line(line):
-
-    # TODO
-    ele = 'ele'
-    action = 'insert'
-
-    return BufferElement(ele, action, with_time=False)
+def parse_line_into_buffer_element(line):
+    [element, action_timestamp, action] = line.split(sep=SEP)
+    # The line splitting [:-1] on action gets rid of the line break
+    return BufferElement(element, action[:-1], action_timestamp)
 
 
 def load_buffer_blocks_sort_and_remove_duplicates(node_timestamp, buffer_timestamps):
@@ -431,7 +438,26 @@ def load_buffer_elements_from_path_files(node_timestamp, buffer_timestamps):
     return elements
 
 
-#
+def append_to_sorted_buffer_elements_file(node_timestamp, sorted_timestamp, elements: list):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+    with open(sorted_filepath, 'a') as f:
+        elements_as_str = [element.to_output_string() for element in elements]
+        f.writelines(elements_as_str)
+
+
+def get_buffer_elements_from_sorted_filereader(file_reader, max_lines):
+    """ Reads the next lines from the file_reader and directly parses each line into Buffer Element. Return is collections.deque. """
+    lines = deque()
+    for line in file_reader:
+        if not max_lines:
+            break
+        lines.append(parse_line_into_buffer_element(line))
+        max_lines -= 1
+
+    if not lines:
+        return None
+    return lines
+
 # # https://stackoverflow.com/questions/17444679/reading-a-huge-csv-file
 # def chunks_of_data(data, chunk_size):
 #     # TODO len(data) doesn't work on data from a csv reader. Need a slightly different approach if we want to read x lines

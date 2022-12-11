@@ -12,6 +12,7 @@ NODE_INFORMATION_FILE_STRING = 'data.txt'
 TIMESTAMP_FORMAT = '%Y_%m_%d-%H_%M_%S_%f'
 BLOCK_STRING = 'block_'
 LEAF_STRING = 'leaf_'
+SORTED_STRING = 'sorted_'
 # TODO Which file extension to use? CSV? TXT?
 FILE_EXTENSION = ''
 
@@ -61,6 +62,16 @@ def leaf_file_name_from_timestamp(timestamp):
     return LEAF_STRING + timestamp()
 
 
+# Returns sorted file name
+def sorted_file_name_from_timestamp(timestamp):
+    return SORTED_STRING + timestamp
+
+
+# Returns sorted file path
+def get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp):
+    return Path(os.path.join(get_node_dir_path_from_timestamp(node_timestamp), sorted_file_name_from_timestamp(sorted_timestamp)))
+
+
 # Returns life file path
 def get_leaf_file_path_from_timestamps(node_timestamp, leaf_timestamp):
     return Path(os.path.join(get_node_dir_path_from_timestamp(node_timestamp), leaf_file_name_from_timestamp(leaf_timestamp)))
@@ -79,9 +90,29 @@ def delete_all_nodes():
         shutil.rmtree(NODES_DIR)
 
 
+def delete_several_buffer_files_with_timestamps(node_timestamp, buffer_timestamps):
+    for buffer_timestamp in buffer_timestamps:
+        delete_buffer_file_with_timestamp(node_timestamp, buffer_timestamp)
+
+
 def delete_buffer_file_with_timestamp(node_timestamp, buffer_timestamp):
     buffer_file_path = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
     os.remove(buffer_file_path)
+
+
+def get_file_reader_for_sorted_filepath(node_timestamp, sorted_timestamp):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+    return open(sorted_filepath, 'r')
+
+
+def delete_sorted_files_with_timestamps(node_timestamp, sorted_timestamps):
+    for sorted_timestamp in sorted_timestamps:
+        delete_sorted_file_with_timestamp(node_timestamp, sorted_timestamp)
+
+
+def delete_sorted_file_with_timestamp(node_timestamp, sorted_timestamp):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+    os.remove(sorted_filepath)
 
 
 # String representations of node and buffer elements:
