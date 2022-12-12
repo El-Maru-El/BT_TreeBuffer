@@ -29,7 +29,7 @@ class BufferTree:
 
         self.total_written_leaf_blocks = 0
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_blocks=[])
-        self.root = root_node.node_timestamp
+        self.root = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
         self.internal_node_emptying_queue = []
         self.leaf_node_emptying_queue = DoublyLinkedList()
@@ -66,9 +66,9 @@ class BufferTree:
 
             if root.buffer_is_full():
                 if root.is_internal_node():
-                    self.internal_node_emptying_queue.append(ChildParent(root.node_timestamp, None))
+                    self.internal_node_emptying_queue.append(ChildParent(root.node_id, None))
                 else:
-                    self.leaf_node_emptying_queue.append(ChildParent(root.node_timestamp, None))
+                    self.leaf_node_emptying_queue.append(ChildParent(root.node_id, None))
                 self.clear_all_full_buffers()
 
     def clear_all_full_buffers(self):
@@ -77,15 +77,15 @@ class BufferTree:
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
-            node_timestamp, parent_timestamp = self.internal_node_emptying_queue.pop(0)
-            node = load_node(node_timestamp, parent_timestamp)
+            node_id, parent_timestamp = self.internal_node_emptying_queue.pop(0)
+            node = load_node(node_id, parent_timestamp)
             node.clear_internal_buffer()
             write_node(node)
 
     def clear_full_leaf_buffers(self):
         while not self.leaf_node_emptying_queue.is_empty():
-            node_timestamp, parent_timestamp = self.leaf_node_emptying_queue.pop_first()
-            node = load_node(node_timestamp, parent_timestamp)
+            node_id, parent_timestamp = self.leaf_node_emptying_queue.pop_first()
+            node = load_node(node_id, parent_timestamp)
 
             requires_deleting = node.clear_leaf_buffer()
 
@@ -98,9 +98,9 @@ class BufferTree:
 
 
 class TreeNode:
-    def __init__(self, node_timestamp=None, is_internal_node=None, handles=None, children=None, buffer_blocks=None, last_buffer_size=0, parent_timestamp=None):
-        if node_timestamp is None:
-            node_timestamp = generate_new_nodes_dir()
+    def __init__(self, node_id=None, is_internal_node=None, handles=None, children=None, buffer_blocks=None, last_buffer_size=0, parent_timestamp=None):
+        if node_id is None:
+            node_id = generate_new_nodes_dir()
 
         if buffer_blocks is None:
             buffer_blocks = []
@@ -111,7 +111,7 @@ class TreeNode:
         if children is None:
             children = []
 
-        self.node_timestamp = node_timestamp
+        self.node_id = node_id
 
         self.handles = handles
         self.children_paths = children
@@ -130,7 +130,7 @@ class TreeNode:
         buffer_timestamp = get_current_timestamp()
 
         self.buffer_block_timestamps.append(buffer_timestamp)
-        write_buffer_block(self.node_timestamp, buffer_timestamp, elements)
+        write_buffer_block(self.node_id, buffer_timestamp, elements)
 
     def add_elements_to_buffer(self, parent_path, elements):
         tree = BufferTree.tree_instance
@@ -138,7 +138,7 @@ class TreeNode:
         if self.buffer_block_timestamps and self.last_buffer_size < tree.B:
             # TODO Is this done? Think so!
             elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
-            append_to_buffer(self.node_timestamp, self.buffer_block_timestamps[-1], elements[:elements_to_add])
+            append_to_buffer(self.node_id, self.buffer_block_timestamps[-1], elements[:elements_to_add])
             self.last_buffer_size += elements_to_add
             start_index = elements_to_add
         else:
@@ -147,7 +147,7 @@ class TreeNode:
         while start_index < len(elements):
             elements_to_add = min(len(elements) - start_index, tree.B)
             buffer_timestamp = get_current_timestamp()
-            write_buffer_block(self.node_timestamp, buffer_timestamp, elements[start_index:start_index + elements_to_add])
+            write_buffer_block(self.node_id, buffer_timestamp, elements[start_index:start_index + elements_to_add])
             self.buffer_block_timestamps.append(buffer_timestamp)
 
             start_index += elements_to_add
@@ -156,9 +156,9 @@ class TreeNode:
         if self.buffer_is_full():
             # TODO We need to check first whether the node might already be in the queue. Edit: Do we really need to check that? Is that possible?
             if self.is_internal_node():
-                tree.internal_node_emptying_queue.insert(0, ChildParent(self.node_timestamp, parent_path))
+                tree.internal_node_emptying_queue.insert(0, ChildParent(self.node_id, parent_path))
             else:
-                tree.leaf_node_emptying_queue.append(ChildParent(self.node_timestamp, parent_path))
+                tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
 
     def buffer_is_full(self):
         tree = BufferTree.tree_instance
@@ -173,7 +173,7 @@ class TreeNode:
         return len(self.buffer_block_timestamps) > limit
 
     def is_root(self):
-        return BufferTree.tree_instance.root == self.node_timestamp
+        return BufferTree.tree_instance.root == self.node_id
 
     def clear_internal_buffer(self):
         read_size = BufferTree.tree_instance.m // 2
@@ -186,9 +186,9 @@ class TreeNode:
         """ Read_size = How many files to read at once. Also deletes the buffer blocks from external memory and modifies self.buffer_block_timestamps. """
         blocks_to_read = self.buffer_block_timestamps[:read_size]
         self.buffer_block_timestamps = self.buffer_block_timestamps[read_size:]
-        delete_several_buffer_files_with_timestamps(self.node_timestamp, blocks_to_read)
+        delete_several_buffer_files_with_timestamps(self.node_id, blocks_to_read)
 
-        return load_buffer_blocks_sort_and_remove_duplicates(self.node_timestamp, blocks_to_read)
+        return load_buffer_blocks_sort_and_remove_duplicates(self.node_id, blocks_to_read)
 
     def clear_leaf_buffer(self):
         tree = BufferTree.tree_instance
@@ -198,7 +198,7 @@ class TreeNode:
 
         # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
         sorted_timestamps = self.prepare_buffer_blocks_into_manageable_sorted_files()
-        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_timestamp, sorted_timestamps, tree.M)
+        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_timestamps, tree.M)
         # TODO Once file is sorted, do the rest of the work
         with open(sorted_filepath, 'r') as file:
             new_leaf_block = []
@@ -227,7 +227,7 @@ class TreeNode:
         while self.buffer_block_timestamps:
             elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
             sorted_timestamp = get_current_timestamp()
-            append_to_sorted_buffer_elements_file(self.node_timestamp, sorted_timestamp, elements)
+            append_to_sorted_buffer_elements_file(self.node_id, sorted_timestamp, elements)
             sorted_timestamps.append(sorted_timestamp)
 
         return sorted_timestamps
@@ -247,7 +247,7 @@ class TreeNode:
                     child_node_path = self.children_paths[child_index]
 
                     child_node = load_node(child_node_path)
-                    child_node.add_elements_to_buffer(self.node_timestamp, output_to_child)
+                    child_node.add_elements_to_buffer(self.node_id, output_to_child)
                     write_node(child_node)
 
                 output_to_child = []
@@ -256,7 +256,7 @@ class TreeNode:
     def get_leaf_elements_as_list(self):
         leaf_elements = []
         for child in self.children_paths:
-            child_path = get_leaf_file_path_from_timestamps(self.node_timestamp, child)
+            child_path = get_leaf_file_path_from_timestamps(self.node_id, child)
             # TODO What to do now?
         pass
 
@@ -311,8 +311,8 @@ class NodeBufferBlock:
 
 # Node structure ideas:
 # is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
-def load_node(node_timestamp, parent_timestamp=None) -> TreeNode:
-    file_path = node_information_file_path_from_timestamp(node_timestamp)
+def load_node(node_id, parent_timestamp=None) -> TreeNode:
+    file_path = node_information_file_path_from_timestamp(node_id)
     with open(file_path, 'r') as f:
         data = f.read().split(SEP)
 
@@ -338,7 +338,7 @@ def load_node(node_timestamp, parent_timestamp=None) -> TreeNode:
     index += 1
 
     node_instance = TreeNode(
-        node_timestamp=node_timestamp,
+        node_id=node_id,
         is_internal_node=is_internal_node,
         handles=handles,
         children=children_timestamps,
@@ -360,7 +360,7 @@ def write_node(node: TreeNode):
 
     output_string = SEP.join(str_list)
 
-    file_path = node_information_file_path_from_timestamp(node.node_timestamp)
+    file_path = node_information_file_path_from_timestamp(node.node_id)
 
     with open(file_path, 'w') as f:
         f.write(output_string)
@@ -368,8 +368,8 @@ def write_node(node: TreeNode):
 
 # Buffer Block Structure:
 # Each line: Element;Timestamp;Action
-def read_buffer_block_elements(node_timestamp, block_timestamp):
-    block_filepath = get_buffer_file_path_from_timestamps(node_timestamp, block_timestamp)
+def read_buffer_block_elements(node_id, block_timestamp):
+    block_filepath = get_buffer_file_path_from_timestamps(node_id, block_timestamp)
 
     with open(block_filepath, 'r') as f:
         elements = []
@@ -379,29 +379,29 @@ def read_buffer_block_elements(node_timestamp, block_timestamp):
     return elements
 
 
-def write_buffer_block(node_timestamp, buffer_timestamp, elements):
-    buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+def write_buffer_block(node_id, buffer_timestamp, elements):
+    buffer_filepath = get_buffer_file_path_from_timestamps(node_id, buffer_timestamp)
 
     with open(buffer_filepath, 'w') as f:
         elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)
 
 
-def append_to_buffer(node_timestamp, buffer_timestamp, elements):
-    buffer_filepath = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+def append_to_buffer(node_id, buffer_timestamp, elements):
+    buffer_filepath = get_buffer_file_path_from_timestamps(node_id, buffer_timestamp)
     with open(buffer_filepath, 'a') as f:
         elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)
 
 
-def load_buffer_blocks_sort_and_remove_duplicates(node_timestamp, buffer_timestamps):
-    elements = load_buffer_elements_from_path_files(node_timestamp, buffer_timestamps)
+def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_timestamps):
+    elements = load_buffer_elements_from_path_files(node_id, buffer_timestamps)
     elements.sort(key=lambda e: (e.key, e.timestamp))
     TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
     return elements
 
 
-def load_buffer_elements_from_path_files(node_timestamp, buffer_timestamps):
+def load_buffer_elements_from_path_files(node_id, buffer_timestamps):
     elements = []
-    [elements.extend(read_buffer_block_elements(node_timestamp, block_timestamp)) for block_timestamp in buffer_timestamps]
+    [elements.extend(read_buffer_block_elements(node_id, block_timestamp)) for block_timestamp in buffer_timestamps]
     return elements

@@ -16,10 +16,22 @@ SORTED_STRING = 'sorted_'
 # TODO Which file extension to use? CSV? TXT?
 FILE_EXTENSION = ''
 
+node_counter = 0
+
+
+def get_new_node_id():
+    global node_counter
+    node_counter += 1
+    return str(node_counter)
+
+
+def get_new_buffer_block_id(amount_previous_blocks):
+    return amount_previous_blocks + 1
+
 
 # Returns the timestamp, by which the rest can be reconstructed
 def generate_new_nodes_dir():
-    timestamp = get_current_timestamp()
+    timestamp = get_new_node_id()
     new_node_dir = get_node_dir_path_from_timestamp(timestamp)
 
     new_node_dir.mkdir(parents=True, exist_ok=False)
@@ -28,8 +40,8 @@ def generate_new_nodes_dir():
 
 
 # Returns Node directory path
-def get_node_dir_path_from_timestamp(node_timestamp):
-    node_dir_name = nodes_dir_name_from_timestamp(node_timestamp)
+def get_node_dir_path_from_timestamp(node_id):
+    node_dir_name = nodes_dir_name_from_timestamp(node_id)
     return Path(os.path.join(NODES_DIR, node_dir_name))
 
 
@@ -43,6 +55,7 @@ def node_information_file_path_from_timestamp(timestamp):
     return os.path.join(get_node_dir_path_from_timestamp(timestamp), NODE_INFORMATION_FILE_STRING)
 
 
+# TODO The only thing we still need timestamps for is BufferElements. How to achieve they aren't the same?
 def get_current_timestamp():
     return datetime.now().strftime(TIMESTAMP_FORMAT)
 
@@ -53,8 +66,8 @@ def buffer_file_name_from_timestamp(timestamp):
 
 
 # Returns buffer file path
-def get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_timestamp), buffer_file_name_from_timestamp(buffer_timestamp)))
+def get_buffer_file_path_from_timestamps(node_id, buffer_timestamp):
+    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), buffer_file_name_from_timestamp(buffer_timestamp)))
 
 
 # Returns leaf file name
@@ -68,13 +81,13 @@ def sorted_file_name_from_timestamp(timestamp):
 
 
 # Returns sorted file path
-def get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_timestamp), sorted_file_name_from_timestamp(sorted_timestamp)))
+def get_sorted_file_path_from_timestamps(node_id, sorted_timestamp):
+    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), sorted_file_name_from_timestamp(sorted_timestamp)))
 
 
 # Returns life file path
-def get_leaf_file_path_from_timestamps(node_timestamp, leaf_timestamp):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_timestamp), leaf_file_name_from_timestamp(leaf_timestamp)))
+def get_leaf_file_path_from_timestamps(node_id, leaf_timestamp):
+    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), leaf_file_name_from_timestamp(leaf_timestamp)))
 
 
 # https://stackoverflow.com/questions/6340351/iterating-through-list-of-list-in-python
@@ -90,28 +103,28 @@ def delete_all_nodes():
         shutil.rmtree(NODES_DIR)
 
 
-def delete_several_buffer_files_with_timestamps(node_timestamp, buffer_timestamps):
+def delete_several_buffer_files_with_timestamps(node_id, buffer_timestamps):
     for buffer_timestamp in buffer_timestamps:
-        delete_buffer_file_with_timestamp(node_timestamp, buffer_timestamp)
+        delete_buffer_file_with_timestamp(node_id, buffer_timestamp)
 
 
-def delete_buffer_file_with_timestamp(node_timestamp, buffer_timestamp):
-    buffer_file_path = get_buffer_file_path_from_timestamps(node_timestamp, buffer_timestamp)
+def delete_buffer_file_with_timestamp(node_id, buffer_timestamp):
+    buffer_file_path = get_buffer_file_path_from_timestamps(node_id, buffer_timestamp)
     os.remove(buffer_file_path)
 
 
-def get_file_reader_for_sorted_filepath(node_timestamp, sorted_timestamp):
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+def get_file_reader_for_sorted_filepath(node_id, sorted_timestamp):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_timestamp)
     return open(sorted_filepath, 'r')
 
 
-def delete_sorted_files_with_timestamps(node_timestamp, sorted_timestamps):
+def delete_sorted_files_with_timestamps(node_id, sorted_timestamps):
     for sorted_timestamp in sorted_timestamps:
-        delete_sorted_file_with_timestamp(node_timestamp, sorted_timestamp)
+        delete_sorted_file_with_timestamp(node_id, sorted_timestamp)
 
 
-def delete_sorted_file_with_timestamp(node_timestamp, sorted_timestamp):
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+def delete_sorted_file_with_timestamp(node_id, sorted_timestamp):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_timestamp)
     os.remove(sorted_filepath)
 
 
@@ -121,8 +134,17 @@ IS_NOT_INTERNAL_STR = 'F'
 SEP = ';'
 
 
-def append_to_sorted_buffer_elements_file(node_timestamp, sorted_timestamp, elements: list):
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamp)
+def append_to_sorted_buffer_elements_file(node_id, sorted_timestamp, elements: list):
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_timestamp)
     with open(sorted_filepath, 'a') as f:
         elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)
+
+
+class SortedIDGenerator:
+    def __init__(self):
+        self.counter = 0
+
+    def get_new_id(self):
+        self.counter += 1
+        return self.counter

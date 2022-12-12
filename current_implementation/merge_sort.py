@@ -6,10 +6,10 @@ from current_implementation.constants_and_helpers import *
 from current_implementation.buffer_element import get_buffer_elements_from_sorted_filereader
 
 
-def external_merge_sort_buffer_elements_many_files(node_timestamp, sorted_timestamps, max_elements):
+def external_merge_sort_buffer_elements_many_files(node_id, sorted_timestamps, max_elements):
     """ Assumes each file passed is sorted and does not contain duplicates. """
     if not sorted_timestamps:
-        raise ValueError(f"Tried merge sort for node with timestamp {node_timestamp}, but sorted_timestamps is {sorted_timestamps}")
+        raise ValueError(f"Tried merge sort for node with timestamp {node_id}, but sorted_timestamps is {sorted_timestamps}")
 
     while len(sorted_timestamps) > 1:
         new_sorted_timestamps = []
@@ -17,27 +17,27 @@ def external_merge_sort_buffer_elements_many_files(node_timestamp, sorted_timest
         for ind, sorted_timestamp in enumerate(sorted_timestamps):
             if ind % 2 == 0:
                 if ind + 1 < len(sorted_timestamps):
-                    new_sorted_timestamp = external_merge_sort_buffer_elements_two_files(node_timestamp, sorted_timestamp, sorted_timestamps[ind + 1], max_elements)
+                    new_sorted_timestamp = external_merge_sort_buffer_elements_two_files(node_id, sorted_timestamp, sorted_timestamps[ind + 1], max_elements)
                     new_sorted_timestamps.append(new_sorted_timestamp)
                 else:
                     new_sorted_timestamps.append(sorted_timestamp)
 
         sorted_timestamps = new_sorted_timestamps
 
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_timestamp, sorted_timestamps[0])
+    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_timestamps[0])
 
     return sorted_filepath
 
 
-def external_merge_sort_buffer_elements_two_files(node_timestamp, left_sorted_timestamp, right_sorted_timestamp, max_elements):
+def external_merge_sort_buffer_elements_two_files(node_id, left_sorted_timestamp, right_sorted_timestamp, max_elements):
     read_size_per_file = max_elements // 2
-    left_filepath = get_sorted_file_path_from_timestamps(node_timestamp, left_sorted_timestamp)
-    right_filepath = get_sorted_file_path_from_timestamps(node_timestamp, right_sorted_timestamp)
+    left_filepath = get_sorted_file_path_from_timestamps(node_id, left_sorted_timestamp)
+    right_filepath = get_sorted_file_path_from_timestamps(node_id, right_sorted_timestamp)
 
     left_filereader = open(left_filepath, 'r')
     right_filereader = open(right_filepath, 'r')
 
-    new_sorted_timestamp = get_current_timestamp()
+    new_sorted_timestamp = get_new_node_id()
 
     left_buffer_elements = get_buffer_elements_from_sorted_filereader(left_filereader, read_size_per_file)
     right_buffer_elements = get_buffer_elements_from_sorted_filereader(right_filereader, read_size_per_file)
@@ -46,7 +46,7 @@ def external_merge_sort_buffer_elements_two_files(node_timestamp, left_sorted_ti
     while left_buffer_elements is not None and right_buffer_elements is not None:
         output_buffer_elements = merge_sort_stop_when_one_is_empty(left_buffer_elements, right_buffer_elements)
 
-        append_to_sorted_buffer_elements_file(node_timestamp, new_sorted_timestamp, output_buffer_elements)
+        append_to_sorted_buffer_elements_file(node_id, new_sorted_timestamp, output_buffer_elements)
         if not left_buffer_elements:
             left_buffer_elements = get_buffer_elements_from_sorted_filereader(left_filereader, read_size_per_file)
         if not right_buffer_elements:
@@ -55,15 +55,15 @@ def external_merge_sort_buffer_elements_two_files(node_timestamp, left_sorted_ti
     # output_buffer_elements is empty now
     while left_buffer_elements:
         # right_buffer_elements must be empty
-        append_to_sorted_buffer_elements_file(node_timestamp, new_sorted_timestamp, left_buffer_elements)
+        append_to_sorted_buffer_elements_file(node_id, new_sorted_timestamp, left_buffer_elements)
         left_buffer_elements = get_buffer_elements_from_sorted_filereader(left_filereader, max_elements)
 
     while right_buffer_elements:
         # left_buffer_elements must have been empty before the prior loop already
-        append_to_sorted_buffer_elements_file(node_timestamp, new_sorted_timestamp, right_buffer_elements)
+        append_to_sorted_buffer_elements_file(node_id, new_sorted_timestamp, right_buffer_elements)
         right_buffer_elements = get_buffer_elements_from_sorted_filereader(right_filereader, max_elements)
 
-    delete_sorted_files_with_timestamps(node_timestamp, [left_sorted_timestamp, right_sorted_timestamp])
+    delete_sorted_files_with_timestamps(node_id, [left_sorted_timestamp, right_sorted_timestamp])
     return new_sorted_timestamp
 
 
