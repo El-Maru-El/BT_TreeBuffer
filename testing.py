@@ -1,6 +1,5 @@
 from current_implementation.new_buffer_tree import *
 import unittest
-import time
 
 
 class TestBasicStructure(unittest.TestCase):
@@ -173,7 +172,4 @@ class TestBasicStructure(unittest.TestCase):
         M = 2 * 4096
         B = 1024
 
-        tree = BufferTree(M=M, B=B)
-        # TODO Remove this once id generators are in place
-        time.sleep(0.1)
-        return tree
+        return BufferTree(M=M, B=B)
