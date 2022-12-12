@@ -77,15 +77,15 @@ class BufferTree:
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
-            node_id, parent_timestamp = self.internal_node_emptying_queue.pop(0)
-            node = load_node(node_id, parent_timestamp)
+            node_id, parent_id = self.internal_node_emptying_queue.pop(0)
+            node = load_node(node_id, parent_id)
             node.clear_internal_buffer()
             write_node(node)
 
     def clear_full_leaf_buffers(self):
         while not self.leaf_node_emptying_queue.is_empty():
-            node_id, parent_timestamp = self.leaf_node_emptying_queue.pop_first()
-            node = load_node(node_id, parent_timestamp)
+            node_id, parent_id = self.leaf_node_emptying_queue.pop_first()
+            node = load_node(node_id, parent_id)
 
             requires_deleting = node.clear_leaf_buffer()
 
@@ -98,7 +98,7 @@ class BufferTree:
 
 
 class TreeNode:
-    def __init__(self, node_id=None, is_internal_node=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_timestamp=None):
+    def __init__(self, node_id=None, is_internal_node=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_id=None):
         if node_id is None:
             node_id = generate_new_nodes_dir()
 
@@ -118,7 +118,7 @@ class TreeNode:
         self.is_intern = is_internal_node
         self.buffer_block_ids = buffer_block_ids
         self.last_buffer_size = last_buffer_size
-        self.parent_timestamp = parent_timestamp
+        self.parent_id = parent_id
 
     def get_new_buffer_block_id(self):
         return generate_new_buffer_block_id(len(self.buffer_block_ids))
@@ -200,8 +200,8 @@ class TreeNode:
         num_children_before = len(self.children_paths)
 
         # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
-        sorted_timestamps = self.prepare_buffer_blocks_into_manageable_sorted_files()
-        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_timestamps, tree.M)
+        sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
+        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
         # TODO Once file is sorted, do the rest of the work
         with open(sorted_filepath, 'r') as file:
             new_leaf_block = []
@@ -226,14 +226,14 @@ class TreeNode:
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
         read_size = BufferTree.tree_instance.m
 
-        sorted_timestamps = []
+        sorted_ids = []
         while self.buffer_block_ids:
             elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
-            sorted_timestamp = get_current_timestamp()
-            append_to_sorted_buffer_elements_file(self.node_id, sorted_timestamp, elements)
-            sorted_timestamps.append(sorted_timestamp)
+            sorted_id = get_new_sorted_id()
+            append_to_sorted_buffer_elements_file(self.node_id, sorted_id, elements)
+            sorted_ids.append(sorted_id)
 
-        return sorted_timestamps
+        return sorted_ids
 
     def pass_elements_to_children(self, elements):
         # Slightly complicated implementation, but therefore does not use unnecessary memory space
@@ -314,7 +314,7 @@ class NodeBufferBlock:
 
 # Node structure ideas:
 # is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
-def load_node(node_id, parent_timestamp=None) -> TreeNode:
+def load_node(node_id, parent_id=None) -> TreeNode:
     file_path = node_information_file_path_from_timestamp(node_id)
     with open(file_path, 'r') as f:
         data = f.read().split(SEP)
@@ -347,7 +347,7 @@ def load_node(node_id, parent_timestamp=None) -> TreeNode:
         children=children_timestamps,
         buffer_block_ids=buffer_block_ids,
         last_buffer_size=last_buffer_size,
-        parent_timestamp=parent_timestamp
+        parent_id=parent_id
     )
     return node_instance
 
