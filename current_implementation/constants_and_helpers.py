@@ -25,8 +25,8 @@ def get_new_node_id():
     return str(node_counter)
 
 
-def get_new_buffer_block_id(amount_previous_blocks):
-    return amount_previous_blocks + 1
+def generate_new_buffer_block_id(amount_previous_blocks):
+    return str(amount_previous_blocks + 1)
 
 
 # Returns the timestamp, by which the rest can be reconstructed
@@ -66,8 +66,8 @@ def buffer_file_name_from_timestamp(timestamp):
 
 
 # Returns buffer file path
-def get_buffer_file_path_from_timestamps(node_id, buffer_timestamp):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), buffer_file_name_from_timestamp(buffer_timestamp)))
+def get_buffer_file_path_from_timestamps(node_id, buffer_block_id):
+    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), buffer_file_name_from_timestamp(buffer_block_id)))
 
 
 # Returns leaf file name
@@ -103,13 +103,13 @@ def delete_all_nodes():
         shutil.rmtree(NODES_DIR)
 
 
-def delete_several_buffer_files_with_timestamps(node_id, buffer_timestamps):
-    for buffer_timestamp in buffer_timestamps:
-        delete_buffer_file_with_timestamp(node_id, buffer_timestamp)
+def delete_several_buffer_files_with_timestamps(node_id, buffer_block_ids):
+    for buffer_block_id in buffer_block_ids:
+        delete_buffer_file_with_timestamp(node_id, buffer_block_id)
 
 
-def delete_buffer_file_with_timestamp(node_id, buffer_timestamp):
-    buffer_file_path = get_buffer_file_path_from_timestamps(node_id, buffer_timestamp)
+def delete_buffer_file_with_timestamp(node_id, buffer_block_id):
+    buffer_file_path = get_buffer_file_path_from_timestamps(node_id, buffer_block_id)
     os.remove(buffer_file_path)
 
 

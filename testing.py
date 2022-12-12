@@ -29,9 +29,9 @@ class TestBasicStructure(unittest.TestCase):
     def test_basic_buffer(self):
         fake_node = TreeNode(is_internal_node=False)
         elements = [BufferElement(str(i), Action.INSERT) for i in range(10)]
-        buffer_timestamp = get_current_timestamp()
-        write_buffer_block(fake_node.node_id, buffer_timestamp, elements)
-        reloaded_elements = read_buffer_block_elements(fake_node.node_id, buffer_timestamp)
+        buffer_block_id = fake_node.get_new_buffer_block_id()
+        write_buffer_block(fake_node.node_id, buffer_block_id, elements)
+        reloaded_elements = read_buffer_block_elements(fake_node.node_id, buffer_block_id)
         self.assertEqual(elements, reloaded_elements)
 
     def test_tree_buffer_one_block(self):
@@ -42,9 +42,9 @@ class TestBasicStructure(unittest.TestCase):
             tree.insert_to_tree(element)
 
         root_node = load_node(tree.root)
-        self.assertEqual(len(root_node.buffer_block_timestamps), 1)
+        self.assertEqual(len(root_node.buffer_block_ids), 1)
 
-        buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_timestamps[0])
+        buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_ids[0])
         buffer_elements_just_keys = [ele.element for ele in buffer_elements]
 
         self.assertEqual(buffer_elements_just_keys, elements_to_add[:tree.B])
@@ -57,9 +57,9 @@ class TestBasicStructure(unittest.TestCase):
             tree.insert_to_tree(element)
 
         root_node = load_node(tree.root)
-        self.assertEqual(len(root_node.buffer_block_timestamps), 2)
-        first_buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_timestamps[0])
-        second_buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_timestamps[1])
+        self.assertEqual(len(root_node.buffer_block_ids), 2)
+        first_buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_ids[0])
+        second_buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_ids[1])
 
         buffer_one_just_keys = [ele.element for ele in first_buffer_elements]
         buffer_two_just_keys = [ele.element for ele in second_buffer_elements]
@@ -77,9 +77,9 @@ class TestBasicStructure(unittest.TestCase):
 
         fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
 
-        self.assertEqual(len(fake_node.buffer_block_timestamps), 1)
+        self.assertEqual(len(fake_node.buffer_block_ids), 1)
 
-        reloaded_buffer_elements = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[0])
+        reloaded_buffer_elements = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
         self.assertEqual(reloaded_buffer_elements, starting_elements)
 
     def test_add_elements_to_partially_filled_bufferblock(self):
@@ -95,12 +95,12 @@ class TestBasicStructure(unittest.TestCase):
         appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
         fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
 
-        self.assertEqual(len(fake_node.buffer_block_timestamps), 2)
+        self.assertEqual(len(fake_node.buffer_block_ids), 2)
 
-        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[0])
-        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[1])
+        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
+        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[1])
 
-        self.assertNotEqual(fake_node.buffer_block_timestamps[0], fake_node.buffer_block_timestamps[1], 'Same buffer timestamps....')
+        self.assertNotEqual(fake_node.buffer_block_ids[0], fake_node.buffer_block_ids[1], 'Same buffer timestamps....')
         self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:B // 2])
         self.assertEqual(reloaded_buffer_two, appending_elements[B // 2:])
         self.assertEqual(fake_node.last_buffer_size, B // 2)
@@ -118,10 +118,10 @@ class TestBasicStructure(unittest.TestCase):
         appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
         fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
 
-        self.assertEqual(len(fake_node.buffer_block_timestamps), 2)
+        self.assertEqual(len(fake_node.buffer_block_ids), 2)
         self.assertEqual(fake_node.last_buffer_size, B)
-        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[0])
-        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[1])
+        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
+        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[1])
 
         self.assertEqual(reloaded_buffer_one, starting_elements)
         self.assertEqual(reloaded_buffer_two, appending_elements)
@@ -139,9 +139,9 @@ class TestBasicStructure(unittest.TestCase):
         last_element = BufferElement(f'Ending_Element', Action.INSERT)
         fake_node.add_elements_to_buffer(parent_path=None, elements=[last_element])
 
-        self.assertEqual(len(fake_node.buffer_block_timestamps), 1)
+        self.assertEqual(len(fake_node.buffer_block_ids), 1)
 
-        reloaded_buffer_elements = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[0])
+        reloaded_buffer_elements = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
         self.assertEqual(reloaded_buffer_elements, starting_elements + [last_element])
 
     def test_dont_overfill_bufferblock(self):
@@ -157,13 +157,13 @@ class TestBasicStructure(unittest.TestCase):
         appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(2)]
         fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
 
-        self.assertEqual(len(fake_node.buffer_block_timestamps), 2)
+        self.assertEqual(len(fake_node.buffer_block_ids), 2)
 
-        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[0])
-        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_timestamps[1])
+        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
+        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[1])
 
         failed_one = None
-        if fake_node.buffer_block_timestamps[0] == fake_node.buffer_block_timestamps[1]:
+        if fake_node.buffer_block_ids[0] == fake_node.buffer_block_ids[1]:
             failed_one = 'Failed bc the same timestamp was used for both buffer files'
         self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:1], failed_one)
         self.assertEqual(reloaded_buffer_two, appending_elements[1:])
