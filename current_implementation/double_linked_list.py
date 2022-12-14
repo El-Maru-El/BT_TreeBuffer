@@ -52,8 +52,8 @@ class DoublyLinkedList:
         else:
             return None
 
-    def find_and_delete_element(self, node_timestamp):
-        element = self.find_list_element(node_timestamp)
+    def find_and_delete_element(self, node_id):
+        element = self.find_list_element(node_id)
         if element:
             self.remove_element(element)
 
