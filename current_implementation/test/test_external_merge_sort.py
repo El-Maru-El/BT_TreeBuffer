@@ -1,5 +1,4 @@
 from current_implementation.new_buffer_tree import *
-from current_implementation.constants_and_helpers import *
 from current_implementation.merge_sort import *
 from collections import deque
 from current_implementation.create_comparable_string import create_string_from_int
@@ -75,9 +74,6 @@ class TestBasicStructure(unittest.TestCase):
         reloaded_elements = read_buffer_elements_from_file_path(sorted_file_path)
         self.assertEqual(combined, reloaded_elements)
 
-    def test_external_merge_sort_many_files_even_number_of_files(self):
-        node_id = self.leaf_node.node_id
-
     def test_external_merge_sort_uneven_amount_of_files(self):
         node_id = self.leaf_node.node_id
 
@@ -110,10 +106,8 @@ class TestBasicStructure(unittest.TestCase):
 
         new_sorted_file_path = external_merge_sort_buffer_elements_many_files(node_id, [first_sorted_id, second_sorted_id, third_sorted_id], self.max_elem_in_memory)
         reloaded_elements = read_buffer_elements_from_file_path(new_sorted_file_path)
-        self.assert_lists_equal(reloaded_elements, all_elements)
+        self.assertEqual(reloaded_elements, all_elements)
     # TODO Write tests with duplicates once BufferElement-timestamps are fixed
-
-
 
     @staticmethod
     def create_dummy_tree():
@@ -127,8 +121,6 @@ class TestBasicStructure(unittest.TestCase):
         counter = 0
         for left_elem, right_elem in zip(first_list, second_list):
             self.assertEqual(left_elem, right_elem, f'Elements {left_elem} and {right_elem} at index {counter} are not the same')
-
-
 
     def assert_ascending_buffer_elements(self, buffer_elements):
         last_element = None
