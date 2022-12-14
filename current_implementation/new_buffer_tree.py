@@ -203,12 +203,12 @@ class TreeNode:
         sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
         sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
         # TODO Once file is sorted, do the rest of the work
-        with open(sorted_filepath, 'r') as file:
+        with open(sorted_filepath, 'r') as sorted_file_reader:
             new_leaf_block = []
 
             self.get_leaf_elements_as_list()
 
-            line = file.readline()
+            line = sorted_file_reader.readline()
 
             while True:
                 break_condition = False
@@ -258,8 +258,8 @@ class TreeNode:
 
     def get_leaf_elements_as_list(self):
         leaf_elements = []
-        for child in self.children_paths:
-            child_path = get_leaf_file_path_from_timestamps(self.node_id, child)
+        for leaf_id in self.children_paths:
+            child_path = get_leaf_file_path_from_timestamps(self.node_id, leaf_id)
             # TODO What to do now?
         pass
 
@@ -384,7 +384,6 @@ def read_buffer_elements_from_file_path(file_path):
             elements.append(parse_line_into_buffer_element(line))
 
     return elements
-
 
 
 def write_buffer_block(node_id, buffer_block_id, elements):

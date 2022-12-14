@@ -80,7 +80,7 @@ def get_buffer_file_path_from_timestamps(node_id, buffer_block_id):
 
 # Returns leaf file name
 def leaf_file_name_from_timestamp(timestamp):
-    return LEAF_STRING + timestamp()
+    return LEAF_STRING + timestamp
 
 
 # Returns sorted file name
@@ -94,8 +94,8 @@ def get_sorted_file_path_from_timestamps(node_id, sorted_id):
 
 
 # Returns life file path
-def get_leaf_file_path_from_timestamps(node_id, leaf_timestamp):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), leaf_file_name_from_timestamp(leaf_timestamp)))
+def get_leaf_file_path_from_timestamps(node_id, leaf_id):
+    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), leaf_file_name_from_timestamp(leaf_id)))
 
 
 # https://stackoverflow.com/questions/6340351/iterating-through-list-of-list-in-python
