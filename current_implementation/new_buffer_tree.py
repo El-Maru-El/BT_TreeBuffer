@@ -374,12 +374,17 @@ def write_node(node: TreeNode):
 def read_buffer_block_elements(node_id, block_timestamp):
     block_filepath = get_buffer_file_path_from_timestamps(node_id, block_timestamp)
 
-    with open(block_filepath, 'r') as f:
+    return read_buffer_elements_from_file_path(block_filepath)
+
+
+def read_buffer_elements_from_file_path(file_path):
+    with open(file_path, 'r') as f:
         elements = []
         for line in f:
             elements.append(parse_line_into_buffer_element(line))
 
     return elements
+
 
 
 def write_buffer_block(node_id, buffer_block_id, elements):
@@ -398,13 +403,13 @@ def append_to_buffer(node_id, buffer_block_id, elements):
 
 
 def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_block_ids):
-    elements = load_buffer_elements_from_path_files(node_id, buffer_block_ids)
+    elements = load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids)
     elements.sort(key=lambda e: (e.key, e.timestamp))
     TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
     return elements
 
 
-def load_buffer_elements_from_path_files(node_id, buffer_block_ids):
+def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids):
     elements = []
     [elements.extend(read_buffer_block_elements(node_id, block_timestamp)) for block_timestamp in buffer_block_ids]
     return elements

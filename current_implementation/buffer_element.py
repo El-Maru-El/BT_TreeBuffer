@@ -18,6 +18,10 @@ class BufferElement:
     def to_output_string(self):
         return f'{self.element}{SEP}{self.timestamp}{SEP}{self.action}\n'
 
+    # Only for debugging
+    def __str__(self):
+        return f'{self.action}: {self.element} - {self.timestamp}'
+
 
 @unique
 class Action(str, Enum):
@@ -27,7 +31,7 @@ class Action(str, Enum):
     EXISTENT = 'e'
 
 
-def get_buffer_elements_from_sorted_filereader(file_reader, max_lines):
+def get_buffer_elements_from_sorted_filereader_into_deque(file_reader, max_lines):
     """ Reads the next lines from the file_reader and directly parses each line into Buffer Element. Return is collections.deque. """
     lines = deque()
     for line in file_reader:

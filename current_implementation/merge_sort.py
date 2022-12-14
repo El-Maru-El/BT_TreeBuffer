@@ -1,9 +1,7 @@
 """ Contains the functionality to do an external merge sort on an arbitrary amount of files containing BufferElement.
 Assumes that the elements within EACH file passed are sorted and no file contains the same element more than once."""
-from collections import deque
-
 from current_implementation.constants_and_helpers import *
-from current_implementation.buffer_element import get_buffer_elements_from_sorted_filereader
+from current_implementation.buffer_element import get_buffer_elements_from_sorted_filereader_into_deque
 
 
 def external_merge_sort_buffer_elements_many_files(node_id, sorted_ids, max_elements):
@@ -39,8 +37,8 @@ def external_merge_sort_buffer_elements_two_files(node_id, left_sorted_id, right
 
     new_sorted_id = get_new_sorted_id()
 
-    left_buffer_elements = get_buffer_elements_from_sorted_filereader(left_filereader, read_size_per_file)
-    right_buffer_elements = get_buffer_elements_from_sorted_filereader(right_filereader, read_size_per_file)
+    left_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(left_filereader, read_size_per_file)
+    right_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(right_filereader, read_size_per_file)
 
     # Merge until one file has been completely merged. Every time a buffer of one file runs full, get the next bulk of lines
     while left_buffer_elements is not None and right_buffer_elements is not None:
@@ -48,21 +46,23 @@ def external_merge_sort_buffer_elements_two_files(node_id, left_sorted_id, right
 
         append_to_sorted_buffer_elements_file(node_id, new_sorted_id, output_buffer_elements)
         if not left_buffer_elements:
-            left_buffer_elements = get_buffer_elements_from_sorted_filereader(left_filereader, read_size_per_file)
+            left_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(left_filereader, read_size_per_file)
         if not right_buffer_elements:
-            right_buffer_elements = get_buffer_elements_from_sorted_filereader(right_filereader, read_size_per_file)
+            right_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(right_filereader, read_size_per_file)
 
     # output_buffer_elements is empty now
     while left_buffer_elements:
         # right_buffer_elements must be empty
         append_to_sorted_buffer_elements_file(node_id, new_sorted_id, left_buffer_elements)
-        left_buffer_elements = get_buffer_elements_from_sorted_filereader(left_filereader, max_elements)
+        left_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(left_filereader, max_elements)
 
     while right_buffer_elements:
         # left_buffer_elements must have been empty before the prior loop already
         append_to_sorted_buffer_elements_file(node_id, new_sorted_id, right_buffer_elements)
-        right_buffer_elements = get_buffer_elements_from_sorted_filereader(right_filereader, max_elements)
+        right_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(right_filereader, max_elements)
 
+    left_filereader.close()
+    right_filereader.close()
     delete_sorted_files_with_timestamps(node_id, [left_sorted_id, right_sorted_id])
     return new_sorted_id
 
@@ -89,55 +89,59 @@ def merge_sort_stop_when_one_is_empty(deque_one, deque_two):
     return output_buffer_elements
 
 
-def internal_merge_of_sorted_lists(file_path_list):
-    """ Assumes all elements of all files fit into main-memory at once!!!"""
-    file_path_deque = deque(file_path_list)
-
-    result = deque()
-    for file_path in file_path_deque:
-        # TODO
-        pass
 
 
-def merge_list_of_buffer_elements(list_of_deques_of_buffer_elements) -> list:
-    """ Format of passed iterable: [Iterable<BufferElement>]"""
-    list_of_deques_of_buffer_elements = [deque(sub_list) for sub_list in list_of_deques_of_buffer_elements]
-
-    result = []
-    while any(elements for elements in list_of_deques_of_buffer_elements):
-        smallest_elements = pop_smallest_elements_of_deques_with_smallest_key(list_of_deques_of_buffer_elements)
-        smallest_elements.sort()
-    return result
 
 
-def pop_smallest_elements_of_deques_with_smallest_key(list_of_deques_of_buffer_elements):
-    """ Returns the smallest elements of any deque. Also deletes iterables in the original list
-    :param list_of_deques_of_buffer_elements: Format has to be List of deque of BufferElement. """
-    smallest_key = list_of_deques_of_buffer_elements[0][0].element
-    deques_with_smallest_element = []
-    indices = deque()
-    for ind, buffer_element_deque in enumerate(list_of_deques_of_buffer_elements):
-        if buffer_element_deque[0].element < smallest_key:
-            smallest_key = buffer_element_deque[0].element
-            deques_with_smallest_element = [buffer_element_deque]
-            indices = deque([ind])
-        elif buffer_element_deque[0].element == smallest_key:
-            deques_with_smallest_element.append(buffer_element_deque)
-            indices.appendleft(ind)
-
-    smallest_elements = [some_deque.popleft() for some_deque in deques_with_smallest_element]
-    # Identified all indices of empty dequeues in the list and delete them (starting from the back of the list)
-    for ind in indices:
-        if not list_of_deques_of_buffer_elements[ind]:
-            del list_of_deques_of_buffer_elements[ind]
-
-    return smallest_elements
+# def internal_merge_of_sorted_lists(file_path_list):
+#     """ Assumes all elements of all files fit into main-memory at once!!!"""
+#     file_path_deque = deque(file_path_list)
+#
+#     result = deque()
+#     for file_path in file_path_deque:
+#         # TODO
+#         pass
 
 
-def external_merge_sort(first_file_path_list, second_file_path_list, lines_that_fit_into_main_memory):
-    first_file_path_deque = deque(first_file_path_list)
-    second_file_path_deque = deque(second_file_path_list)
+# def merge_list_of_buffer_elements(list_of_deques_of_buffer_elements) -> list:
+#     """ Format of passed iterable: [Iterable<BufferElement>]"""
+#     list_of_deques_of_buffer_elements = [deque(sub_list) for sub_list in list_of_deques_of_buffer_elements]
+#
+#     result = []
+#     while any(elements for elements in list_of_deques_of_buffer_elements):
+#         smallest_elements = pop_smallest_elements_of_deques_with_smallest_key(list_of_deques_of_buffer_elements)
+#         smallest_elements.sort()
+#     return result
 
-    for file_path in first_file_path_deque:
-        # TODO
-        pass
+
+# def pop_smallest_elements_of_deques_with_smallest_key(list_of_deques_of_buffer_elements):
+#     """ Returns the smallest elements of any deque. Also deletes iterables in the original list
+#     :param list_of_deques_of_buffer_elements: Format has to be List of deque of BufferElement. """
+#     smallest_key = list_of_deques_of_buffer_elements[0][0].element
+#     deques_with_smallest_element = []
+#     indices = deque()
+#     for ind, buffer_element_deque in enumerate(list_of_deques_of_buffer_elements):
+#         if buffer_element_deque[0].element < smallest_key:
+#             smallest_key = buffer_element_deque[0].element
+#             deques_with_smallest_element = [buffer_element_deque]
+#             indices = deque([ind])
+#         elif buffer_element_deque[0].element == smallest_key:
+#             deques_with_smallest_element.append(buffer_element_deque)
+#             indices.appendleft(ind)
+#
+#     smallest_elements = [some_deque.popleft() for some_deque in deques_with_smallest_element]
+#     # Identified all indices of empty dequeues in the list and delete them (starting from the back of the list)
+#     for ind in indices:
+#         if not list_of_deques_of_buffer_elements[ind]:
+#             del list_of_deques_of_buffer_elements[ind]
+#
+#     return smallest_elements
+
+
+# def external_merge_sort(first_file_path_list, second_file_path_list, lines_that_fit_into_main_memory):
+#     first_file_path_deque = deque(first_file_path_list)
+#     second_file_path_deque = deque(second_file_path_list)
+#
+#     for file_path in first_file_path_deque:
+#         # TODO
+#         pass
