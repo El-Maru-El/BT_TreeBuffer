@@ -28,7 +28,6 @@ class Action(str, Enum):
     """ Indication to whether an element is deleted or inserted."""
     INSERT = 'i'
     DELETE = 'd'
-    EXISTENT = 'e'
 
 
 def get_buffer_elements_from_sorted_filereader_into_deque(file_reader, max_lines):

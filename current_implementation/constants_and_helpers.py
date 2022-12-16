@@ -37,6 +37,10 @@ def get_new_sorted_id():
     return str(sorted_counter)
 
 
+def generate_new_leaf_id(num_previous_leaves, num_new_leaves):
+    return num_previous_leaves + num_new_leaves + 1
+
+
 # Returns the timestamp, by which the rest can be reconstructed
 def generate_new_nodes_dir():
     node_id = get_new_node_id()
@@ -135,6 +139,15 @@ def delete_sorted_file_with_timestamp(node_id, sorted_id):
     sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_id)
     os.remove(sorted_filepath)
 
+
+def delete_old_leaves(node_id, leaf_ids):
+    for leaf_id in leaf_ids:
+        leaf_file_path = get_leaf_file_path_from_timestamps(node_id, leaf_id)
+        os.remove(leaf_file_path)
+
+
+def delete_filepath(file_path):
+    os.remove(file_path)
 
 # String representations of node and buffer elements:
 IS_INTERNAL_STR = 'T'

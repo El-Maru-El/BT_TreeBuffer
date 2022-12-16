@@ -1,10 +1,11 @@
 import math
-from current_implementation.buffer_element import BufferElement, Action, parse_line_into_buffer_element
+from current_implementation.buffer_element import *
 from current_implementation.constants_and_helpers import *
 from collections import namedtuple
 from current_implementation.constants_and_helpers import append_to_sorted_buffer_elements_file
 from current_implementation.double_linked_list import DoublyLinkedList
 from current_implementation.merge_sort import external_merge_sort_buffer_elements_many_files
+from collections import deque
 
 ChildParent = namedtuple('ChildParent', field_names=['child', 'parent'])
 
@@ -78,14 +79,14 @@ class BufferTree:
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
             node_id, parent_id = self.internal_node_emptying_queue.pop(0)
-            node = load_node(node_id, parent_id)
+            node = load_node(node_id)
             node.clear_internal_buffer()
             write_node(node)
 
     def clear_full_leaf_buffers(self):
         while not self.leaf_node_emptying_queue.is_empty():
             node_id, parent_id = self.leaf_node_emptying_queue.pop_first()
-            node = load_node(node_id, parent_id)
+            node = load_node(node_id)
 
             requires_deleting = node.clear_leaf_buffer()
 
@@ -203,25 +204,102 @@ class TreeNode:
         sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
         sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
         # TODO Once file is sorted, do the rest of the work
-        with open(sorted_filepath, 'r') as sorted_file_reader:
-            new_leaf_block = []
 
-            self.get_leaf_elements_as_list()
+        self.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
 
-            line = sorted_file_reader.readline()
-
-            while True:
-                break_condition = False
-
-                if not line:
-                    # TODO
-                    pass
-                buffer_element = parse_line_into_buffer_element(line)
-
-                if break_condition:
-                    break
+        if len(self.children_paths) > num_children_before:
+            # TODO
+            pass
+        elif len(self.children_paths) < num_children_before:
+            # TODO
+            pass
 
         return required_delete_from_outside
+
+    def merge_sorted_buffer_with_leaf_blocks(self, sorted_filepath):
+        block_size = BufferTree.tree_instance.B
+
+        with open(sorted_filepath, 'r') as sorted_file_reader:
+            consumed_child_counter = 0
+
+            old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
+            sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
+
+            new_leaf_block_elements = []
+            new_split_keys = []
+            new_leaf_ids = []
+
+            while old_leaf_block_elements is not None and sorted_buffer_elements is not None:
+                leaf_element = old_leaf_block_elements[0]
+                buffer_element = sorted_buffer_elements[0]
+
+                if leaf_element < buffer_element.element:
+                    new_leaf_block_elements.append(old_leaf_block_elements.popleft())
+                elif leaf_element > buffer_element.element:
+                    if buffer_element.action == Action.INSERT:
+                        new_leaf_block_elements.append(sorted_buffer_elements.popleft().element)
+                    # Else it's a "delete" and element should not be appended
+                else:
+                    old_leaf_block_elements.popleft()
+                    sorted_buffer_elements.popleft()
+                    if buffer_element.action == Action.INSERT:
+                        new_leaf_block_elements.append(buffer_element.element)
+                    # Else it's a "delete" and element should not be appended
+
+                if len(new_leaf_block_elements) == block_size:
+                    new_leaf_id = generate_new_leaf_id(len(self.children_paths), len(new_leaf_ids))
+
+                    new_split_keys.append(new_leaf_block_elements[-1])
+                    new_leaf_ids.append(new_leaf_id)
+                    write_leaf_block(self.node_id, new_leaf_id, new_leaf_block_elements)
+                    new_leaf_block_elements = []
+
+                if not old_leaf_block_elements:
+                    consumed_child_counter += 1
+                    old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
+
+                if not sorted_buffer_elements:
+                    sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
+
+            # Now either buffer elements are empty, or old leaf elements are empty
+            while old_leaf_block_elements is not None:
+                new_leaf_block_elements.append(old_leaf_block_elements.popleft())
+
+                if len(new_leaf_block_elements) == block_size:
+                    new_leaf_id = generate_new_leaf_id(len(self.children_paths), len(new_leaf_ids))
+
+                    new_split_keys.append(new_leaf_block_elements[-1])
+                    new_leaf_ids.append(new_leaf_id)
+                    write_leaf_block(self.node_id, new_leaf_id, new_leaf_block_elements)
+                    new_leaf_block_elements = []
+
+                if not old_leaf_block_elements:
+                    consumed_child_counter += 1
+                    old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
+
+            while sorted_buffer_elements is not None:
+                new_leaf_block_elements.append(sorted_buffer_elements.popleft().element)
+
+                if len(new_leaf_block_elements) == block_size:
+                    new_leaf_id = generate_new_leaf_id(len(self.children_paths), len(new_leaf_ids))
+
+                    new_split_keys.append(new_leaf_block_elements[-1])
+                    new_leaf_ids.append(new_leaf_id)
+                    write_leaf_block(self.node_id, new_leaf_id, new_leaf_block_elements)
+                    new_leaf_block_elements = []
+
+                if not sorted_buffer_elements:
+                    sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
+
+        delete_filepath(sorted_filepath)
+        delete_old_leaves(self.node_id, self.children_paths)
+        self.handles = new_split_keys
+        self.children_paths = new_leaf_ids
+
+
+
+
+
 
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
         read_size = BufferTree.tree_instance.m
@@ -256,13 +334,6 @@ class TreeNode:
                 output_to_child = []
                 child_index += 1
 
-    def get_leaf_elements_as_list(self):
-        leaf_elements = []
-        for leaf_id in self.children_paths:
-            child_path = get_leaf_file_path_from_timestamps(self.node_id, leaf_id)
-            # TODO What to do now?
-        pass
-
     @staticmethod
     def annihilate_insertions_deletions_with_matching_timestamps(elements):
         """ Eliminates elements of the passed list if the element key exists several times. Only keeps last entry.
@@ -275,6 +346,12 @@ class TreeNode:
 
         for i in indices_to_del:
             del elements[i]
+
+    def read_leaf_block_elements_as_deque(self, consumed_child_counter):
+        if consumed_child_counter == len(self.children_paths):
+            return None
+        else:
+            return read_leaf_block_elements_as_deque(self.node_id, self.children_paths[consumed_child_counter])
 
 
 class TreeBuffer:
@@ -313,8 +390,8 @@ class NodeBufferBlock:
 
 
 # Node structure ideas:
-# is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
-def load_node(node_id, parent_id=None) -> TreeNode:
+# is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block, parent_id
+def load_node(node_id) -> TreeNode:
     file_path = node_information_file_path_from_timestamp(node_id)
     with open(file_path, 'r') as f:
         data = f.read().split(SEP)
@@ -340,6 +417,9 @@ def load_node(node_id, parent_id=None) -> TreeNode:
     last_buffer_size = int(data[index])
     index += 1
 
+    parent_id = data[index]
+    index += 1
+
     node_instance = TreeNode(
         node_id=node_id,
         is_internal_node=is_internal_node,
@@ -358,7 +438,7 @@ def write_node(node: TreeNode):
     else:
         is_internal_string = IS_NOT_INTERNAL_STR
 
-    raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_paths), *node.children_paths, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size]
+    raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_paths), *node.children_paths, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size, node.parent_id]
     str_list = [str(elem) for elem in raw_list]
 
     output_string = SEP.join(str_list)
@@ -412,3 +492,22 @@ def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids):
     elements = []
     [elements.extend(read_buffer_block_elements(node_id, block_timestamp)) for block_timestamp in buffer_block_ids]
     return elements
+
+
+def read_leaf_block_elements_as_deque(node_id, leaf_id):
+    leaf_file_path = get_leaf_file_path_from_timestamps(node_id, leaf_id)
+    elements = deque()
+    with open(leaf_file_path, 'r') as f:
+        for line in f:
+            # The line splitting [:-1] on action gets rid of the line break
+            elements.append(line[:-1])
+
+    return elements
+
+
+def write_leaf_block(node_id, leaf_id, elements):
+    leaf_file_path = get_leaf_file_path_from_timestamps(node_id, leaf_id)
+
+    with open(leaf_file_path, 'w') as f:
+        elements_in_correct_format = [f'{element}\n' for element in elements]
+        f.writelines(elements_in_correct_format)
