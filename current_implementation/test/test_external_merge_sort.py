@@ -5,7 +5,7 @@ from current_implementation.create_comparable_string import create_string_from_i
 import unittest
 
 
-class TestBasicStructure(unittest.TestCase):
+class TestExternalMergeSort(unittest.TestCase):
 
     def setUp(self) -> None:
         delete_all_nodes()
