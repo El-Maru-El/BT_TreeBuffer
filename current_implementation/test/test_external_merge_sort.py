@@ -109,18 +109,14 @@ class TestExternalMergeSort(unittest.TestCase):
         self.assertEqual(reloaded_elements, all_elements)
     # TODO Write tests with duplicates once BufferElement-timestamps are fixed
 
+
+
     @staticmethod
     def create_dummy_tree():
         M = 2 * 4096
         B = 1024
 
         return BufferTree(M=M, B=B)
-
-    def assert_lists_equal(self, first_list, second_list):
-        self.assertEqual(len(first_list), len(second_list), "Lists are not of equal length")
-        counter = 0
-        for left_elem, right_elem in zip(first_list, second_list):
-            self.assertEqual(left_elem, right_elem, f'Elements {left_elem} and {right_elem} at index {counter} are not the same')
 
     def assert_ascending_buffer_elements(self, buffer_elements):
         last_element = None

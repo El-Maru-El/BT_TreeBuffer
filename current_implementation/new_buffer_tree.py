@@ -296,11 +296,6 @@ class TreeNode:
         self.handles = new_split_keys
         self.children_paths = new_leaf_ids
 
-
-
-
-
-
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
         read_size = BufferTree.tree_instance.m
 
@@ -418,6 +413,8 @@ def load_node(node_id) -> TreeNode:
     index += 1
 
     parent_id = data[index]
+    if parent_id == 'None':
+        parent_id = None
     index += 1
 
     node_instance = TreeNode(
