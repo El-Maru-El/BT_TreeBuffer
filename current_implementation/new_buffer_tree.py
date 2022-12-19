@@ -27,7 +27,7 @@ class BufferTree:
 
         self.total_written_leaf_blocks = 0
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_block_ids=[])
-        self.root = root_node.node_id
+        self.root_node_id = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
         self.internal_node_emptying_queue = deque()
         self.leaf_node_emptying_queue = DoublyLinkedList()
@@ -55,7 +55,7 @@ class BufferTree:
     def check_tree_buffer(self):
         if self.tree_buffer.is_full():
             # TODO This could be done more efficiently, since this Block is first written then immediately read again if buffer is full
-            root = load_node(self.root)
+            root = load_node(self.root_node_id)
             root.add_block_to_buffer(self.tree_buffer.get_elements())
             root.last_buffer_size = self.B
             write_node(root)
@@ -177,7 +177,7 @@ class TreeNode:
         return len(self.buffer_block_ids) > limit
 
     def is_root(self):
-        return BufferTree.tree_instance.root == self.node_id
+        return BufferTree.tree_instance.root_node_id == self.node_id
 
     def clear_internal_buffer(self):
         read_size = BufferTree.tree_instance.m // 2
