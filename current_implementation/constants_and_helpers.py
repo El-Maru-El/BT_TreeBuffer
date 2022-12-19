@@ -6,7 +6,9 @@ import shutil
 
 
 WORKING_DIR = os.path.dirname(current_implementation.__file__)
-NODES_DIR = os.path.join(WORKING_DIR, 'nodes_collection')
+RESOURCES_DIR = os.path.join(WORKING_DIR, 'resource_data')
+NODES_DIR = os.path.join(RESOURCES_DIR, 'nodes_collection')
+LEAVES_DIR = os.path.join(RESOURCES_DIR, 'leaves_collection')
 NODE_STRING = 'node_'
 NODE_INFORMATION_FILE_STRING = 'data.txt'
 TIMESTAMP_FORMAT = '%Y_%m_%d-%H_%M_%S_%f'
@@ -19,6 +21,14 @@ FILE_EXTENSION = ''
 node_counter = 0
 
 sorted_counter = 0
+
+leaf_counter = 0
+
+
+def clean_up_and_initialize_resource_directories():
+    delete_all_tree_data()
+    Path(NODES_DIR).mkdir(parents=True, exist_ok=True)
+    Path(LEAVES_DIR).mkdir(parents=False, exist_ok=True)
 
 
 def get_new_node_id():
@@ -37,8 +47,10 @@ def get_new_sorted_id():
     return str(sorted_counter)
 
 
-def generate_new_leaf_id(num_previous_leaves, num_new_leaves):
-    return num_previous_leaves + num_new_leaves + 1
+def generate_new_leaf_id():
+    global leaf_counter
+    leaf_counter += 1
+    return str(leaf_counter)
 
 
 # Returns the timestamp, by which the rest can be reconstructed
@@ -83,13 +95,13 @@ def get_buffer_file_path_from_timestamps(node_id, buffer_block_id):
 
 
 # Returns leaf file name
-def leaf_file_name_from_timestamp(timestamp):
-    return LEAF_STRING + timestamp
+def leaf_file_name_from_timestamp(leaf_id):
+    return LEAF_STRING + leaf_id
 
 
 # Returns sorted file name
-def sorted_file_name_from_timestamp(timestamp):
-    return SORTED_STRING + timestamp
+def sorted_file_name_from_timestamp(sorted_id):
+    return SORTED_STRING + sorted_id
 
 
 # Returns sorted file path
@@ -98,8 +110,8 @@ def get_sorted_file_path_from_timestamps(node_id, sorted_id):
 
 
 # Returns life file path
-def get_leaf_file_path_from_timestamps(node_id, leaf_id):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), leaf_file_name_from_timestamp(leaf_id)))
+def get_leaf_file_path_from_timestamps(leaf_id):
+    return Path(os.path.join(LEAVES_DIR, leaf_file_name_from_timestamp(leaf_id)))
 
 
 # https://stackoverflow.com/questions/6340351/iterating-through-list-of-list-in-python
@@ -110,9 +122,9 @@ def traverse_lists_in_list(super_list):
             yield element
 
 
-def delete_all_nodes():
-    if os.path.exists(NODES_DIR):
-        shutil.rmtree(NODES_DIR)
+def delete_all_tree_data():
+    if os.path.exists(RESOURCES_DIR):
+        shutil.rmtree(RESOURCES_DIR)
 
 
 def delete_several_buffer_files_with_timestamps(node_id, buffer_block_ids):
@@ -140,9 +152,9 @@ def delete_sorted_file_with_timestamp(node_id, sorted_id):
     os.remove(sorted_filepath)
 
 
-def delete_old_leaves(node_id, leaf_ids):
+def delete_old_leaves(leaf_ids):
     for leaf_id in leaf_ids:
-        leaf_file_path = get_leaf_file_path_from_timestamps(node_id, leaf_id)
+        leaf_file_path = get_leaf_file_path_from_timestamps(leaf_id)
         os.remove(leaf_file_path)
 
 

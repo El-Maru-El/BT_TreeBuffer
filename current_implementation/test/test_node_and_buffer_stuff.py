@@ -5,7 +5,7 @@ import unittest
 class TestBasicStructure(unittest.TestCase):
 
     def setUp(self):
-        delete_all_nodes()
+        clean_up_and_initialize_resource_directories()
 
     # def tearDown(self):
     #     delete_all_nodes()

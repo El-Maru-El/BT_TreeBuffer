@@ -1,5 +1,5 @@
 # Default ignored files
 quick_test.py
-*nodes_collection*
+*resource_data*
 *.pyc
 *.txt

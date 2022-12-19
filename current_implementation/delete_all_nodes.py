@@ -1,5 +1,5 @@
-from constants_and_helpers import delete_all_nodes
+from constants_and_helpers import delete_all_tree_data
 
 
 if __name__ == '__main__':
-    delete_all_nodes()
+    delete_all_tree_data()

@@ -2,7 +2,6 @@ import math
 from current_implementation.buffer_element import *
 from current_implementation.constants_and_helpers import *
 from collections import namedtuple
-from current_implementation.constants_and_helpers import append_to_sorted_buffer_elements_file
 from current_implementation.double_linked_list import DoublyLinkedList
 from current_implementation.merge_sort import external_merge_sort_buffer_elements_many_files
 from collections import deque
@@ -16,6 +15,7 @@ class BufferTree:
     tree_instance = None
 
     def __init__(self, M, B):
+        clean_up_and_initialize_resource_directories()
         self.M = M
         self.B = B
         m = M // B
@@ -247,11 +247,11 @@ class TreeNode:
                     # Else it's a "delete" and element should not be appended
 
                 if len(new_leaf_block_elements) == block_size:
-                    new_leaf_id = generate_new_leaf_id(len(self.children_paths), len(new_leaf_ids))
+                    new_leaf_id = generate_new_leaf_id()
 
                     new_split_keys.append(new_leaf_block_elements[-1])
                     new_leaf_ids.append(new_leaf_id)
-                    write_leaf_block(self.node_id, new_leaf_id, new_leaf_block_elements)
+                    write_leaf_block(new_leaf_id, new_leaf_block_elements)
                     new_leaf_block_elements = []
 
                 if not old_leaf_block_elements:
@@ -266,11 +266,11 @@ class TreeNode:
                 new_leaf_block_elements.append(old_leaf_block_elements.popleft())
 
                 if len(new_leaf_block_elements) == block_size:
-                    new_leaf_id = generate_new_leaf_id(len(self.children_paths), len(new_leaf_ids))
+                    new_leaf_id = generate_new_leaf_id()
 
                     new_split_keys.append(new_leaf_block_elements[-1])
                     new_leaf_ids.append(new_leaf_id)
-                    write_leaf_block(self.node_id, new_leaf_id, new_leaf_block_elements)
+                    write_leaf_block(new_leaf_id, new_leaf_block_elements)
                     new_leaf_block_elements = []
 
                 if not old_leaf_block_elements:
@@ -281,18 +281,18 @@ class TreeNode:
                 new_leaf_block_elements.append(sorted_buffer_elements.popleft().element)
 
                 if len(new_leaf_block_elements) == block_size:
-                    new_leaf_id = generate_new_leaf_id(len(self.children_paths), len(new_leaf_ids))
+                    new_leaf_id = generate_new_leaf_id()
 
                     new_split_keys.append(new_leaf_block_elements[-1])
                     new_leaf_ids.append(new_leaf_id)
-                    write_leaf_block(self.node_id, new_leaf_id, new_leaf_block_elements)
+                    write_leaf_block(new_leaf_id, new_leaf_block_elements)
                     new_leaf_block_elements = []
 
                 if not sorted_buffer_elements:
                     sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
 
         delete_filepath(sorted_filepath)
-        delete_old_leaves(self.node_id, self.children_paths)
+        delete_old_leaves(self.children_paths)
         self.handles = new_split_keys
         self.children_paths = new_leaf_ids
 
@@ -346,7 +346,7 @@ class TreeNode:
         if consumed_child_counter == len(self.children_paths):
             return None
         else:
-            return read_leaf_block_elements_as_deque(self.node_id, self.children_paths[consumed_child_counter])
+            return read_leaf_block_elements_as_deque(self.children_paths[consumed_child_counter])
 
 
 class TreeBuffer:
@@ -491,8 +491,8 @@ def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids):
     return elements
 
 
-def read_leaf_block_elements_as_deque(node_id, leaf_id):
-    leaf_file_path = get_leaf_file_path_from_timestamps(node_id, leaf_id)
+def read_leaf_block_elements_as_deque(leaf_id):
+    leaf_file_path = get_leaf_file_path_from_timestamps(leaf_id)
     elements = deque()
     with open(leaf_file_path, 'r') as f:
         for line in f:
@@ -502,8 +502,8 @@ def read_leaf_block_elements_as_deque(node_id, leaf_id):
     return elements
 
 
-def write_leaf_block(node_id, leaf_id, elements):
-    leaf_file_path = get_leaf_file_path_from_timestamps(node_id, leaf_id)
+def write_leaf_block(leaf_id, elements):
+    leaf_file_path = get_leaf_file_path_from_timestamps(leaf_id)
 
     with open(leaf_file_path, 'w') as f:
         elements_in_correct_format = [f'{element}\n' for element in elements]

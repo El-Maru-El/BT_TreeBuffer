@@ -7,8 +7,8 @@ import unittest
 
 class TestExternalMergeSort(unittest.TestCase):
 
-    def setUp(self) -> None:
-        delete_all_nodes()
+    def setUp(self):
+        clean_up_and_initialize_resource_directories()
         self.tree = self.create_dummy_tree()
         self.leaf_node = TreeNode(is_internal_node=False)
         self.max_elem_in_memory = self.tree.M
