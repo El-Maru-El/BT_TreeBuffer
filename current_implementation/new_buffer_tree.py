@@ -32,7 +32,7 @@ class BufferTree:
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_block_ids=[])
         self.root = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
-        self.internal_node_emptying_queue = []
+        self.internal_node_emptying_queue = deque()
         self.leaf_node_emptying_queue = DoublyLinkedList()
 
         BufferTree.tree_instance = self
@@ -78,7 +78,7 @@ class BufferTree:
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
-            node_id, parent_id = self.internal_node_emptying_queue.pop(0)
+            node_id, parent_id = self.internal_node_emptying_queue.popleft()
             node = load_node(node_id)
             node.clear_internal_buffer()
             write_node(node)
@@ -160,7 +160,7 @@ class TreeNode:
         if self.buffer_is_full():
             # TODO We need to check first whether the node might already be in the queue. Edit: Do we really need to check that? Is that possible?
             if self.is_internal_node():
-                tree.internal_node_emptying_queue.insert(0, ChildParent(self.node_id, parent_path))
+                tree.internal_node_emptying_queue.appendleft(ChildParent(self.node_id, parent_path))
             else:
                 tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
 
