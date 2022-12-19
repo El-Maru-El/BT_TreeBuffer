@@ -48,7 +48,7 @@ class TestExternalMergeSort(unittest.TestCase):
 
         sorted_id = get_new_sorted_id()
         append_to_sorted_buffer_elements_file(self.leaf_node.node_id, sorted_id, sorted_file_elements)
-        file_path = get_sorted_file_path_from_timestamps(self.leaf_node.node_id, sorted_id)
+        file_path = get_sorted_file_path_from_ids(self.leaf_node.node_id, sorted_id)
         reloaded_file_elements = read_buffer_elements_from_file_path(file_path)
         self.assertEqual(sorted_file_elements, reloaded_file_elements)
 
@@ -70,7 +70,7 @@ class TestExternalMergeSort(unittest.TestCase):
         append_to_sorted_buffer_elements_file(node_id, first_sorted_id, first_file_elements)
         append_to_sorted_buffer_elements_file(node_id, second_sorted_id, second_file_elements)
         new_sorted_id = external_merge_sort_buffer_elements_two_files(node_id, first_sorted_id, second_sorted_id, self.max_elem_in_memory)
-        sorted_file_path = get_sorted_file_path_from_timestamps(node_id, new_sorted_id)
+        sorted_file_path = get_sorted_file_path_from_ids(node_id, new_sorted_id)
         reloaded_elements = read_buffer_elements_from_file_path(sorted_file_path)
         self.assertEqual(combined, reloaded_elements)
 

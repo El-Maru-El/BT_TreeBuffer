@@ -22,15 +22,15 @@ def external_merge_sort_buffer_elements_many_files(node_id, sorted_ids, max_elem
 
         sorted_ids = new_sorted_ids
 
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_ids[0])
+    sorted_filepath = get_sorted_file_path_from_ids(node_id, sorted_ids[0])
 
     return sorted_filepath
 
 
 def external_merge_sort_buffer_elements_two_files(node_id, left_sorted_id, right_sorted_id, max_elements):
     read_size_per_file = max_elements // 2
-    left_filepath = get_sorted_file_path_from_timestamps(node_id, left_sorted_id)
-    right_filepath = get_sorted_file_path_from_timestamps(node_id, right_sorted_id)
+    left_filepath = get_sorted_file_path_from_ids(node_id, left_sorted_id)
+    right_filepath = get_sorted_file_path_from_ids(node_id, right_sorted_id)
 
     left_filereader = open(left_filepath, 'r')
     right_filereader = open(right_filepath, 'r')
@@ -63,7 +63,7 @@ def external_merge_sort_buffer_elements_two_files(node_id, left_sorted_id, right
 
     left_filereader.close()
     right_filereader.close()
-    delete_sorted_files_with_timestamps(node_id, [left_sorted_id, right_sorted_id])
+    delete_sorted_files_with_ids(node_id, [left_sorted_id, right_sorted_id])
     return new_sorted_id
 
 

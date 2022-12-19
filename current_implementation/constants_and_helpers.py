@@ -53,30 +53,32 @@ def generate_new_leaf_id():
     return str(leaf_counter)
 
 
-# Returns the timestamp, by which the rest can be reconstructed
+# Returns the node_id, by which the rest of file-paths can be reconstructed
 def generate_new_nodes_dir():
-    node_id = get_new_node_id()
-    new_node_dir = get_node_dir_path_from_timestamp(node_id)
+    new_node_id = get_new_node_id()
+    generate_node_dir_for_id(new_node_id)
+    return new_node_id
 
-    new_node_dir.mkdir(parents=True, exist_ok=False)
 
-    return node_id
+def generate_node_dir_for_id(node_id):
+    new_node_dir = get_node_dir_path_from_id(node_id)
+    new_node_dir.mkdir(parents=False, exist_ok=True)
 
 
 # Returns Node directory path
-def get_node_dir_path_from_timestamp(node_id):
-    node_dir_name = nodes_dir_name_from_timestamp(node_id)
+def get_node_dir_path_from_id(node_id):
+    node_dir_name = nodes_dir_name_from_id(node_id)
     return Path(os.path.join(NODES_DIR, node_dir_name))
 
 
 # Returns Node directory name
-def nodes_dir_name_from_timestamp(timestamp):
+def nodes_dir_name_from_id(timestamp):
     return NODE_STRING + timestamp
 
 
 # Returns node meta information file path
-def node_information_file_path_from_timestamp(timestamp):
-    return os.path.join(get_node_dir_path_from_timestamp(timestamp), NODE_INFORMATION_FILE_STRING)
+def node_information_file_path_from_id(node_id):
+    return os.path.join(get_node_dir_path_from_id(node_id), NODE_INFORMATION_FILE_STRING)
 
 
 # TODO The only thing we still need timestamps for is BufferElements. How to achieve they aren't the same?
@@ -85,33 +87,33 @@ def get_current_timestamp():
 
 
 # Returns buffer file name
-def buffer_file_name_from_timestamp(timestamp):
-    return BLOCK_STRING + timestamp
+def buffer_file_name_from_id(buffer_block_id):
+    return BLOCK_STRING + buffer_block_id
 
 
 # Returns buffer file path
-def get_buffer_file_path_from_timestamps(node_id, buffer_block_id):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), buffer_file_name_from_timestamp(buffer_block_id)))
+def get_buffer_file_path_from_ids(node_id, buffer_block_id):
+    return Path(os.path.join(get_node_dir_path_from_id(node_id), buffer_file_name_from_id(buffer_block_id)))
 
 
 # Returns leaf file name
-def leaf_file_name_from_timestamp(leaf_id):
+def leaf_file_name_from_id(leaf_id):
     return LEAF_STRING + leaf_id
 
 
 # Returns sorted file name
-def sorted_file_name_from_timestamp(sorted_id):
+def sorted_file_name_from_id(sorted_id):
     return SORTED_STRING + sorted_id
 
 
 # Returns sorted file path
-def get_sorted_file_path_from_timestamps(node_id, sorted_id):
-    return Path(os.path.join(get_node_dir_path_from_timestamp(node_id), sorted_file_name_from_timestamp(sorted_id)))
+def get_sorted_file_path_from_ids(node_id, sorted_id):
+    return Path(os.path.join(get_node_dir_path_from_id(node_id), sorted_file_name_from_id(sorted_id)))
 
 
 # Returns life file path
-def get_leaf_file_path_from_timestamps(leaf_id):
-    return Path(os.path.join(LEAVES_DIR, leaf_file_name_from_timestamp(leaf_id)))
+def get_leaf_file_path_from_id(leaf_id):
+    return Path(os.path.join(LEAVES_DIR, leaf_file_name_from_id(leaf_id)))
 
 
 # https://stackoverflow.com/questions/6340351/iterating-through-list-of-list-in-python
@@ -127,48 +129,49 @@ def delete_all_tree_data():
         shutil.rmtree(RESOURCES_DIR)
 
 
-def delete_several_buffer_files_with_timestamps(node_id, buffer_block_ids):
+def delete_several_buffer_files_with_ids(node_id, buffer_block_ids):
     for buffer_block_id in buffer_block_ids:
-        delete_buffer_file_with_timestamp(node_id, buffer_block_id)
+        delete_buffer_file_with_id(node_id, buffer_block_id)
 
 
-def delete_buffer_file_with_timestamp(node_id, buffer_block_id):
-    buffer_file_path = get_buffer_file_path_from_timestamps(node_id, buffer_block_id)
+def delete_buffer_file_with_id(node_id, buffer_block_id):
+    buffer_file_path = get_buffer_file_path_from_ids(node_id, buffer_block_id)
     os.remove(buffer_file_path)
 
 
-def get_file_reader_for_sorted_filepath(node_id, sorted_id):
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_id)
+def get_file_reader_for_sorted_filepath_with_ids(node_id, sorted_id):
+    sorted_filepath = get_sorted_file_path_from_ids(node_id, sorted_id)
     return open(sorted_filepath, 'r')
 
 
-def delete_sorted_files_with_timestamps(node_id, sorted_id):
+def delete_sorted_files_with_ids(node_id, sorted_id):
     for sorted_id in sorted_id:
-        delete_sorted_file_with_timestamp(node_id, sorted_id)
+        delete_sorted_file_with_id(node_id, sorted_id)
 
 
-def delete_sorted_file_with_timestamp(node_id, sorted_id):
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_id)
+def delete_sorted_file_with_id(node_id, sorted_id):
+    sorted_filepath = get_sorted_file_path_from_ids(node_id, sorted_id)
     os.remove(sorted_filepath)
 
 
 def delete_old_leaves(leaf_ids):
     for leaf_id in leaf_ids:
-        leaf_file_path = get_leaf_file_path_from_timestamps(leaf_id)
+        leaf_file_path = get_leaf_file_path_from_id(leaf_id)
         os.remove(leaf_file_path)
 
 
 def delete_filepath(file_path):
     os.remove(file_path)
 
+
 # String representations of node and buffer elements:
-IS_INTERNAL_STR = 'T'
-IS_NOT_INTERNAL_STR = 'F'
+TRUE_STRING = 'T'
+FALSE_STRING = 'F'
 SEP = ';'
 
 
 def append_to_sorted_buffer_elements_file(node_id, sorted_id, elements: list):
-    sorted_filepath = get_sorted_file_path_from_timestamps(node_id, sorted_id)
+    sorted_filepath = get_sorted_file_path_from_ids(node_id, sorted_id)
     with open(sorted_filepath, 'a') as f:
         elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)

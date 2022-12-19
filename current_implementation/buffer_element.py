@@ -4,8 +4,8 @@ from current_implementation.constants_and_helpers import get_current_timestamp, 
 
 
 class BufferElement:
-    def __init__(self, element, action, timestamp=None, with_time=True):
-        if with_time and timestamp is None:
+    def __init__(self, element, action, timestamp=None):
+        if timestamp is None:
             timestamp = get_current_timestamp()
 
         self.element = element
