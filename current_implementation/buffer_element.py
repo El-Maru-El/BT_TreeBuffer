@@ -1,12 +1,12 @@
 from collections import deque
 from enum import unique, Enum
-from current_implementation.constants_and_helpers import get_current_timestamp, SEP
+from current_implementation.constants_and_helpers import get_current_timer_as_float, SEP
 
 
 class BufferElement:
     def __init__(self, element, action, timestamp=None):
         if timestamp is None:
-            timestamp = get_current_timestamp()
+            timestamp = get_current_timer_as_float()
 
         self.element = element
         self.timestamp = timestamp
@@ -47,4 +47,4 @@ def get_buffer_elements_from_sorted_filereader_into_deque(file_reader, max_lines
 def parse_line_into_buffer_element(line):
     [element, action_timestamp, action] = line.split(sep=SEP)
     # The line splitting [:-1] on action gets rid of the line break
-    return BufferElement(element, action[:-1], action_timestamp)
+    return BufferElement(element, action[:-1], float(action_timestamp))

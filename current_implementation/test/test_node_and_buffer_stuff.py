@@ -40,10 +40,10 @@ class TestBasicStructure(unittest.TestCase):
         for element in elements_to_add:
             tree.insert_to_tree(element)
 
-        root_node = load_node(tree.root)
+        root_node = load_node(tree.root_node_id)
         self.assertEqual(len(root_node.buffer_block_ids), 1)
 
-        buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_ids[0])
+        buffer_elements = read_buffer_block_elements(tree.root_node_id, root_node.buffer_block_ids[0])
         buffer_elements_just_keys = [ele.element for ele in buffer_elements]
 
         self.assertEqual(buffer_elements_just_keys, elements_to_add[:tree.B])
@@ -55,10 +55,10 @@ class TestBasicStructure(unittest.TestCase):
         for element in elements_to_add:
             tree.insert_to_tree(element)
 
-        root_node = load_node(tree.root)
+        root_node = load_node(tree.root_node_id)
         self.assertEqual(len(root_node.buffer_block_ids), 2)
-        first_buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_ids[0])
-        second_buffer_elements = read_buffer_block_elements(tree.root, root_node.buffer_block_ids[1])
+        first_buffer_elements = read_buffer_block_elements(tree.root_node_id, root_node.buffer_block_ids[0])
+        second_buffer_elements = read_buffer_block_elements(tree.root_node_id, root_node.buffer_block_ids[1])
 
         buffer_one_just_keys = [ele.element for ele in first_buffer_elements]
         buffer_two_just_keys = [ele.element for ele in second_buffer_elements]
@@ -166,6 +166,21 @@ class TestBasicStructure(unittest.TestCase):
             failed_one = 'Failed bc the same timestamp was used for both buffer files'
         self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:1], failed_one)
         self.assertEqual(reloaded_buffer_two, appending_elements[1:])
+
+    def test_buffer_timestamps(self):
+        buffer_elements = [BufferElement('SomeElement', Action.INSERT) for _ in range(100000)]
+        for i in range(len(buffer_elements)-1):
+            self.assertLess(buffer_elements[i].timestamp, buffer_elements[i+1].timestamp, 'Buffer timestamps are not smaller than each other')
+
+    def test_reloading_buffer_element(self):
+        tree = self.create_dummy_tree()
+        B = tree.B
+        node_id = tree.root_node_id
+        buffer_block_id = 'some_block_id'
+        original_buffer_elements = [BufferElement('SomeElement', Action.INSERT) for _ in range(100000)]
+        write_buffer_block(node_id, buffer_block_id, original_buffer_elements)
+        reloaded_elements = read_buffer_block_elements(node_id, buffer_block_id)
+        self.assertEqual(original_buffer_elements, reloaded_elements)
 
     @staticmethod
     def create_dummy_tree():
