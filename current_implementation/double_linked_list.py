@@ -10,13 +10,13 @@ class DoublyLinkedList:
         return self.num_elements == 0
 
     def get_last_without_popping(self):
-        return self.last.child_parent
+        return self.last.node_id
 
-    def append(self, child_parent):
+    def append(self, node_id):
         # TODO Check whether the element is already present in here (Can happen if an internal node has emptied itself several times into the same child, which is a Leaf Node)
         old_last = self.last
 
-        new_list_elem = ListElement(child_parent, prev=self.last, following=None)
+        new_list_elem = ListElement(node_id, prev=self.last, following=None)
         self.last = new_list_elem
 
         if old_last:
@@ -24,7 +24,7 @@ class DoublyLinkedList:
         else:
             self.first = new_list_elem
 
-        self.map[child_parent.child] = new_list_elem
+        self.map[node_id] = new_list_elem
         self.num_elements += 1
 
     def pop_first(self):
@@ -34,7 +34,7 @@ class DoublyLinkedList:
         list_elem = self.first
         self.remove_element(list_elem)
 
-        return list_elem.child_parent
+        return list_elem.node_id
 
     def find_list_element(self, key):
         if key in self.map.keys():
@@ -46,6 +46,8 @@ class DoublyLinkedList:
         element = self.find_list_element(node_id)
         if element:
             self.remove_element(element)
+            return True
+        return False
 
     def remove_element(self, list_elem):
         if self.first == list_elem:
@@ -58,12 +60,12 @@ class DoublyLinkedList:
         else:
             list_elem.following.prev = list_elem.prev
 
-        del self.map[list_elem.child_parent.child]
+        del self.map[list_elem.node_id]
         self.num_elements -= 1
 
 
 class ListElement:
-    def __init__(self, element, prev, following):
-        self.child_parent = element
+    def __init__(self, node_id, prev, following):
+        self.node_id = node_id
         self.prev = prev
         self.following = following

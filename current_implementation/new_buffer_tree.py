@@ -1,12 +1,9 @@
 import math
 from current_implementation.buffer_element import *
 from current_implementation.constants_and_helpers import *
-from collections import namedtuple
 from current_implementation.double_linked_list import DoublyLinkedList
 from current_implementation.merge_sort import external_merge_sort_buffer_elements_many_files
 from collections import deque
-
-ChildParent = namedtuple('ChildParent', field_names=['child', 'parent'])
 
 
 class BufferTree:
@@ -70,7 +67,7 @@ class BufferTree:
                 if root.is_internal_node():
                     self.internal_node_emptying_queue.append(root.node_id)
                 else:
-                    self.leaf_node_emptying_queue.append(ChildParent(root.node_id, None))
+                    self.leaf_node_emptying_queue.append(root.node_id)
                 self.clear_all_full_buffers()
 
     def clear_all_full_buffers(self):
@@ -86,7 +83,7 @@ class BufferTree:
 
     def clear_full_leaf_buffers(self):
         while not self.leaf_node_emptying_queue.is_empty():
-            node_id, parent_id = self.leaf_node_emptying_queue.pop_first()
+            node_id = self.leaf_node_emptying_queue.pop_first()
             node = load_node(node_id)
 
             requires_deleting = node.clear_leaf_buffer()
@@ -164,8 +161,8 @@ class TreeNode:
                 if tree.internal_node_emptying_queue[0] != self.node_id:
                     tree.internal_node_emptying_queue.appendleft(self.node_id)
             else:
-                if tree.leaf_node_emptying_queue.get_last_without_popping().child != self.node_id:
-                    tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
+                if tree.leaf_node_emptying_queue.get_last_without_popping() != self.node_id:
+                    tree.leaf_node_emptying_queue.append(self.node_id)
 
     def buffer_is_full(self):
         tree = BufferTree.tree_instance
