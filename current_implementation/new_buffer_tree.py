@@ -113,7 +113,7 @@ class TreeNode:
         self.node_id = node_id
 
         self.handles = handles
-        self.children_paths = children
+        self.children_ids = children
         self.is_intern = is_internal_node
         self.buffer_block_ids = buffer_block_ids
         self.last_buffer_size = last_buffer_size
@@ -134,11 +134,9 @@ class TreeNode:
         self.buffer_block_ids.append(buffer_block_id)
         write_buffer_block(self.node_id, buffer_block_id, elements)
 
-    def add_elements_to_buffer(self, parent_path, elements):
+    def add_elements_to_buffer(self, elements):
         tree = BufferTree.tree_instance
-        # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
         if self.buffer_block_ids and self.last_buffer_size < tree.B:
-            # TODO Is this done? Think so!
             elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
             append_to_buffer(self.node_id, self.buffer_block_ids[-1], elements[:elements_to_add])
             self.last_buffer_size += elements_to_add
@@ -198,7 +196,7 @@ class TreeNode:
         tree = BufferTree.tree_instance
 
         required_delete_from_outside = False
-        num_children_before = len(self.children_paths)
+        num_children_before = len(self.children_ids)
 
         # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
         sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
@@ -207,10 +205,10 @@ class TreeNode:
 
         self.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
 
-        if len(self.children_paths) > num_children_before:
+        if len(self.children_ids) > num_children_before:
             # TODO
             pass
-        elif len(self.children_paths) < num_children_before:
+        elif len(self.children_ids) < num_children_before:
             # TODO If node-merging is triggered, check whether other node is in buffer-emptying-queue already
             # TODO
             pass
@@ -293,9 +291,9 @@ class TreeNode:
                     sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
 
         delete_filepath(sorted_filepath)
-        delete_old_leaves(self.children_paths)
+        delete_old_leaves(self.children_ids)
         self.handles = new_split_keys
-        self.children_paths = new_leaf_ids
+        self.children_ids = new_leaf_ids
 
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
         read_size = BufferTree.tree_instance.m
@@ -310,25 +308,34 @@ class TreeNode:
         return sorted_ids
 
     def pass_elements_to_children(self, elements):
-        # Slightly complicated implementation, but therefore does not use unnecessary memory space
+        if not elements:
+            return
+
+        elements = deque(elements)
 
         child_index = 0
         output_to_child = []
-        while elements:
-            elem = elements.pop(0)
-            if child_index < len(self.handles) and elem.key <= self.handles[child_index]:
-                output_to_child.append(elem)
-            else:
-                if output_to_child:
 
-                    child_node_path = self.children_paths[child_index]
+        while child_index < len(self.handles):
+            while elements and elements[0].element <= self.handles[child_index]:
+                output_to_child.append(elements.popleft())
 
-                    child_node = load_node(child_node_path)
-                    child_node.add_elements_to_buffer(self.node_id, output_to_child)
-                    write_node(child_node)
+            if output_to_child:
+                child_node_id = self.children_ids[child_index]
+                child_node = load_node(child_node_id)
+                child_node.add_elements_to_buffer(output_to_child)
+                write_node(child_node)
 
-                output_to_child = []
-                child_index += 1
+            output_to_child = []
+            child_index += 1
+
+        # Handle the rest of the elements for the last child
+        output_to_child = list(elements)
+        if output_to_child:
+            child_node_id = self.children_ids[-1]
+            child_node = load_node(child_node_id)
+            child_node.add_elements_to_buffer(output_to_child)
+            write_node(child_node)
 
     @staticmethod
     def annihilate_insertions_deletions_with_matching_timestamps(elements):
@@ -344,10 +351,10 @@ class TreeNode:
             del elements[i]
 
     def read_leaf_block_elements_as_deque(self, consumed_child_counter):
-        if consumed_child_counter == len(self.children_paths):
+        if consumed_child_counter == len(self.children_ids):
             return None
         else:
-            return read_leaf_block_elements_as_deque(self.children_paths[consumed_child_counter])
+            return read_leaf_block_elements_as_deque(self.children_ids[consumed_child_counter])
 
 
 class TreeBuffer:
@@ -436,7 +443,7 @@ def write_node(node: TreeNode):
     else:
         is_internal_string = FALSE_STRING
 
-    raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_paths), *node.children_paths, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size, node.parent_id]
+    raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_ids), *node.children_ids, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size, node.parent_id]
     str_list = [str(elem) for elem in raw_list]
 
     output_string = SEP.join(str_list)
