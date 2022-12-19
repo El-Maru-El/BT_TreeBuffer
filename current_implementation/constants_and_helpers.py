@@ -1,6 +1,7 @@
 import os
 import current_implementation
 from datetime import datetime
+import time
 from pathlib import Path
 import shutil
 
@@ -81,9 +82,8 @@ def node_information_file_path_from_id(node_id):
     return os.path.join(get_node_dir_path_from_id(node_id), NODE_INFORMATION_FILE_STRING)
 
 
-# TODO The only thing we still need timestamps for is BufferElements. How to achieve they aren't the same?
-def get_current_timestamp():
-    return datetime.now().strftime(TIMESTAMP_FORMAT)
+def get_current_timer_as_float() -> float:
+    return time.perf_counter()
 
 
 # Returns buffer file name
