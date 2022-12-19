@@ -342,10 +342,10 @@ class TreeNode:
         """ Eliminates elements of the passed list if the element key exists several times. Only keeps last entry.
             Expects list to be sorted before call."""
         # following list will contain all indices of elements to be deleted in descending order
-        indices_to_del = []
-        for i, elem in enumerate(elements):
-            if i + 1 < len(elements) and elements[i+1].key == elem.key:
-                indices_to_del.insert(0, i)
+        indices_to_del = deque()
+        for i in range(len(elements)-1):
+            if elements[i].element == elements[i+1].element:
+                indices_to_del.appendleft(i)
 
         for i in indices_to_del:
             del elements[i]
@@ -493,7 +493,7 @@ def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_block_ids):
     return elements
 
 
-def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids):
+def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids) -> list:
     elements = []
     [elements.extend(read_buffer_block_elements(node_id, block_timestamp)) for block_timestamp in buffer_block_ids]
     return elements
