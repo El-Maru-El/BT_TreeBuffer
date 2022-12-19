@@ -68,7 +68,7 @@ class BufferTree:
             if root.buffer_is_full():
                 # At this point the queues should still be empty, so no checks to whether root is already present are necessary
                 if root.is_internal_node():
-                    self.internal_node_emptying_queue.append(ChildParent(root.node_id, None))
+                    self.internal_node_emptying_queue.append(root.node_id)
                 else:
                     self.leaf_node_emptying_queue.append(ChildParent(root.node_id, None))
                 self.clear_all_full_buffers()
@@ -79,7 +79,7 @@ class BufferTree:
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
-            node_id, parent_id = self.internal_node_emptying_queue.popleft()
+            node_id = self.internal_node_emptying_queue.popleft()
             node = load_node(node_id)
             node.clear_internal_buffer()
             write_node(node)
@@ -161,8 +161,8 @@ class TreeNode:
         if self.buffer_is_full():
             if self.is_internal_node():
                 # Since we load a specific amount of blocks repeatedly, we might add the same one repeatedly after each other
-                if tree.internal_node_emptying_queue[0].child != self.node_id:
-                    tree.internal_node_emptying_queue.appendleft(ChildParent(self.node_id, parent_path))
+                if tree.internal_node_emptying_queue[0] != self.node_id:
+                    tree.internal_node_emptying_queue.appendleft(self.node_id)
             else:
                 if tree.leaf_node_emptying_queue.get_last_without_popping().child != self.node_id:
                     tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
