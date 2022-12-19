@@ -1,7 +1,7 @@
 # Double Linked List with special look up in O(1) (only works for ChildParent Tuple)
 class DoublyLinkedList:
     def __init__(self):
-        self.root = None
+        self.first = None
         self.last = None
         self.num_elements = 0
         self.map = {}
@@ -9,18 +9,8 @@ class DoublyLinkedList:
     def is_empty(self):
         return self.num_elements == 0
 
-    # Currently not used/needed
-    # def prepend(self, child_parent):
-    #     old_root = self.root
-    #
-    #     new_list_elem = ListElement(child_parent, prev=None, following=self.root)
-    #     self.root = new_list_elem
-    #
-    #     if old_root:
-    #         old_root.prev = new_list_elem
-    #
-    #     self.map[child_parent.child] = new_list_elem
-    #     self.num_elements += 1
+    def get_last_without_popping(self):
+        return self.last.child_parent
 
     def append(self, child_parent):
         # TODO Check whether the element is already present in here (Can happen if an internal node has emptied itself several times into the same child, which is a Leaf Node)
@@ -32,16 +22,16 @@ class DoublyLinkedList:
         if old_last:
             old_last.following = new_list_elem
         else:
-            self.root = new_list_elem
+            self.first = new_list_elem
 
         self.map[child_parent.child] = new_list_elem
         self.num_elements += 1
 
     def pop_first(self):
-        if not self.root:
+        if not self.first:
             raise ValueError("Tried accessing a List Element, but there are none")
 
-        list_elem = self.root
+        list_elem = self.first
         self.remove_element(list_elem)
 
         return list_elem.child_parent
@@ -58,8 +48,8 @@ class DoublyLinkedList:
             self.remove_element(element)
 
     def remove_element(self, list_elem):
-        if self.root == list_elem:
-            self.root = list_elem.following
+        if self.first == list_elem:
+            self.first = list_elem.following
         else:
             list_elem.prev.following = list_elem.following
 

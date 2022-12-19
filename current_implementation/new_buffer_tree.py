@@ -66,6 +66,7 @@ class BufferTree:
             self.tree_buffer.clear_elements()
 
             if root.buffer_is_full():
+                # At this point the queues should still be empty, so no checks to whether root is already present are necessary
                 if root.is_internal_node():
                     self.internal_node_emptying_queue.append(ChildParent(root.node_id, None))
                 else:
@@ -158,11 +159,13 @@ class TreeNode:
             self.last_buffer_size = elements_to_add
 
         if self.buffer_is_full():
-            # TODO We need to check first whether the node might already be in the queue. Edit: Do we really need to check that? Is that possible?
             if self.is_internal_node():
-                tree.internal_node_emptying_queue.appendleft(ChildParent(self.node_id, parent_path))
+                # Since we load a specific amount of blocks repeatedly, we might add the same one repeatedly after each other
+                if tree.internal_node_emptying_queue[0].child != self.node_id:
+                    tree.internal_node_emptying_queue.appendleft(ChildParent(self.node_id, parent_path))
             else:
-                tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
+                if tree.leaf_node_emptying_queue.get_last_without_popping().child != self.node_id:
+                    tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
 
     def buffer_is_full(self):
         tree = BufferTree.tree_instance

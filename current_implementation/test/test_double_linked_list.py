@@ -13,23 +13,23 @@ class TestDoubleLinkedList(unittest.TestCase):
     def test_append(self):
         self.linked_list.append(self.child_parent_string)
         self.assertEqual(self.linked_list.num_elements, 1)
-        self.assertEqual(self.linked_list.root.child_parent, self.child_parent_string)
+        self.assertEqual(self.linked_list.first.child_parent, self.child_parent_string)
         self.assertEqual(self.linked_list.last.child_parent, self.child_parent_string)
-        self.assertEqual(self.linked_list.root.following, None)
-        self.assertEqual(self.linked_list.root.prev, None)
+        self.assertEqual(self.linked_list.first.following, None)
+        self.assertEqual(self.linked_list.first.prev, None)
 
         self.linked_list.append(self.child_parent_int)
         self.assertEqual(self.linked_list.num_elements, 2)
-        self.assertEqual(self.linked_list.root.child_parent, self.child_parent_string)
+        self.assertEqual(self.linked_list.first.child_parent, self.child_parent_string)
         self.assertEqual(self.linked_list.last.child_parent, self.child_parent_int)
-        self.assertEqual(self.linked_list.root.following.child_parent, self.child_parent_int)
+        self.assertEqual(self.linked_list.first.following.child_parent, self.child_parent_int)
         self.assertEqual(self.linked_list.last.prev.child_parent, self.child_parent_string)
 
         self.linked_list.append(self.child_parent_third)
         self.assertEqual(self.linked_list.num_elements, 3)
-        self.assertEqual(self.linked_list.root.child_parent, self.child_parent_string)
-        self.assertEqual(self.linked_list.root.following.child_parent, self.child_parent_int)
-        self.assertEqual(self.linked_list.root.following.following.child_parent, self.child_parent_third)
+        self.assertEqual(self.linked_list.first.child_parent, self.child_parent_string)
+        self.assertEqual(self.linked_list.first.following.child_parent, self.child_parent_int)
+        self.assertEqual(self.linked_list.first.following.following.child_parent, self.child_parent_third)
         self.assertEqual(self.linked_list.last.child_parent, self.child_parent_third)
 
     def test_pop_first(self):
@@ -48,8 +48,8 @@ class TestDoubleLinkedList(unittest.TestCase):
         self.linked_list.append(self.child_parent_third)
 
         self.linked_list.find_and_delete_element(self.child_parent_int.child)
-        self.assertEqual(self.linked_list.root.following.child_parent, self.child_parent_third)
-        self.assertEqual(self.linked_list.last.prev, self.linked_list.root)
+        self.assertEqual(self.linked_list.first.following.child_parent, self.child_parent_third)
+        self.assertEqual(self.linked_list.last.prev, self.linked_list.first)
 
     def test_delete_last(self):
         self.linked_list.append(self.child_parent_string)
