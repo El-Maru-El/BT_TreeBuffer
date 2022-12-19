@@ -190,7 +190,7 @@ class TreeNode:
         """ Read_size = How many files to read at once. Also deletes the buffer blocks from external memory and modifies self.buffer_block_ids. """
         blocks_to_read = self.buffer_block_ids[:read_size]
         self.buffer_block_ids = self.buffer_block_ids[read_size:]
-        delete_several_buffer_files_with_timestamps(self.node_id, blocks_to_read)
+        delete_several_buffer_files_with_ids(self.node_id, blocks_to_read)
 
         return load_buffer_blocks_sort_and_remove_duplicates(self.node_id, blocks_to_read)
 
@@ -387,11 +387,11 @@ class NodeBufferBlock:
 # Node structure ideas:
 # is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block, parent_id
 def load_node(node_id) -> TreeNode:
-    file_path = node_information_file_path_from_timestamp(node_id)
+    file_path = node_information_file_path_from_id(node_id)
     with open(file_path, 'r') as f:
         data = f.read().split(SEP)
 
-    if data[0] == IS_INTERNAL_STR:
+    if data[0] == TRUE_STRING:
         is_internal_node = True
     else:
         is_internal_node = False
@@ -431,16 +431,16 @@ def load_node(node_id) -> TreeNode:
 
 def write_node(node: TreeNode):
     if node.is_internal_node():
-        is_internal_string = IS_INTERNAL_STR
+        is_internal_string = TRUE_STRING
     else:
-        is_internal_string = IS_NOT_INTERNAL_STR
+        is_internal_string = FALSE_STRING
 
     raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_paths), *node.children_paths, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size, node.parent_id]
     str_list = [str(elem) for elem in raw_list]
 
     output_string = SEP.join(str_list)
 
-    file_path = node_information_file_path_from_timestamp(node.node_id)
+    file_path = node_information_file_path_from_id(node.node_id)
 
     with open(file_path, 'w') as f:
         f.write(output_string)
@@ -449,7 +449,7 @@ def write_node(node: TreeNode):
 # Buffer Block Structure:
 # Each line: Element;Timestamp;Action
 def read_buffer_block_elements(node_id, block_timestamp):
-    block_filepath = get_buffer_file_path_from_timestamps(node_id, block_timestamp)
+    block_filepath = get_buffer_file_path_from_ids(node_id, block_timestamp)
 
     return read_buffer_elements_from_file_path(block_filepath)
 
@@ -464,7 +464,7 @@ def read_buffer_elements_from_file_path(file_path):
 
 
 def write_buffer_block(node_id, buffer_block_id, elements):
-    buffer_filepath = get_buffer_file_path_from_timestamps(node_id, buffer_block_id)
+    buffer_filepath = get_buffer_file_path_from_ids(node_id, buffer_block_id)
 
     with open(buffer_filepath, 'w') as f:
         elements_as_str = [element.to_output_string() for element in elements]
@@ -472,7 +472,7 @@ def write_buffer_block(node_id, buffer_block_id, elements):
 
 
 def append_to_buffer(node_id, buffer_block_id, elements):
-    buffer_filepath = get_buffer_file_path_from_timestamps(node_id, buffer_block_id)
+    buffer_filepath = get_buffer_file_path_from_ids(node_id, buffer_block_id)
     with open(buffer_filepath, 'a') as f:
         elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)
@@ -492,7 +492,7 @@ def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids):
 
 
 def read_leaf_block_elements_as_deque(leaf_id):
-    leaf_file_path = get_leaf_file_path_from_timestamps(leaf_id)
+    leaf_file_path = get_leaf_file_path_from_id(leaf_id)
     elements = deque()
     with open(leaf_file_path, 'r') as f:
         for line in f:
@@ -503,7 +503,7 @@ def read_leaf_block_elements_as_deque(leaf_id):
 
 
 def write_leaf_block(leaf_id, elements):
-    leaf_file_path = get_leaf_file_path_from_timestamps(leaf_id)
+    leaf_file_path = get_leaf_file_path_from_id(leaf_id)
 
     with open(leaf_file_path, 'w') as f:
         elements_in_correct_format = [f'{element}\n' for element in elements]
