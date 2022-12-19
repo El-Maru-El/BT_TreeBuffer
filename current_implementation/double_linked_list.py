@@ -13,7 +13,7 @@ class DoublyLinkedList:
         return self.last.node_id
 
     def append(self, node_id):
-        # TODO Check whether the element is already present in here (Can happen if an internal node has emptied itself several times into the same child, which is a Leaf Node)
+        # Calling function must make sure the node_id isn't in the queue already
         old_last = self.last
 
         new_list_elem = ListElement(node_id, prev=self.last, following=None)

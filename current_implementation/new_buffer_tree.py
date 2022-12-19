@@ -158,10 +158,10 @@ class TreeNode:
         if self.buffer_is_full():
             if self.is_internal_node():
                 # Since we load a specific amount of blocks repeatedly, we might add the same one repeatedly after each other
-                if tree.internal_node_emptying_queue[0] != self.node_id:
+                if tree.internal_node_emptying_queue and tree.internal_node_emptying_queue[0] != self.node_id:
                     tree.internal_node_emptying_queue.appendleft(self.node_id)
             else:
-                if tree.leaf_node_emptying_queue.get_last_without_popping() != self.node_id:
+                if not tree.leaf_node_emptying_queue.is_empty() and tree.leaf_node_emptying_queue.get_last_without_popping() != self.node_id:
                     tree.leaf_node_emptying_queue.append(self.node_id)
 
     def buffer_is_full(self):
