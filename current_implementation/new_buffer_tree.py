@@ -134,11 +134,9 @@ class TreeNode:
         self.buffer_block_ids.append(buffer_block_id)
         write_buffer_block(self.node_id, buffer_block_id, elements)
 
-    def add_elements_to_buffer(self, parent_path, elements):
+    def add_elements_to_buffer(self, elements):
         tree = BufferTree.tree_instance
-        # TODO append to that buffer until it is full, partition the other elements to other new buffer-blocks
         if self.buffer_block_ids and self.last_buffer_size < tree.B:
-            # TODO Is this done? Think so!
             elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
             append_to_buffer(self.node_id, self.buffer_block_ids[-1], elements[:elements_to_add])
             self.last_buffer_size += elements_to_add
@@ -310,21 +308,22 @@ class TreeNode:
         return sorted_ids
 
     def pass_elements_to_children(self, elements):
-        # Slightly complicated implementation, but therefore does not use unnecessary memory space
+        # Slightly complicated implementation, but therefore does not use unnecessary or long run-time for slicing lists
+        elements = deque(elements)
 
         child_index = 0
         output_to_child = []
         while elements:
-            elem = elements.pop(0)
-            if child_index < len(self.handles) and elem.key <= self.handles[child_index]:
-                output_to_child.append(elem)
+            # TODO Does this stop passing elements to last child bc child_index will be == len(self.handles)?
+            if child_index < len(self.handles) and elements[0].key <= self.handles[child_index]:
+                output_to_child.append(elements.popleft())
             else:
                 if output_to_child:
 
                     child_node_path = self.children_paths[child_index]
 
                     child_node = load_node(child_node_path)
-                    child_node.add_elements_to_buffer(self.node_id, output_to_child)
+                    child_node.add_elements_to_buffer(output_to_child)
                     write_node(child_node)
 
                 output_to_child = []

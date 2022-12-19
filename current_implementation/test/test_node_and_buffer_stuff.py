@@ -74,7 +74,7 @@ class TestBasicStructure(unittest.TestCase):
 
         starting_elements = [BufferElement(f'Element_{i}', Action.INSERT) for i in range(tree.B // 3)]
 
-        fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
+        fake_node.add_elements_to_buffer(elements=starting_elements)
 
         self.assertEqual(len(fake_node.buffer_block_ids), 1)
 
@@ -89,10 +89,10 @@ class TestBasicStructure(unittest.TestCase):
         node_id = fake_node.node_id
 
         starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B // 2)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
+        fake_node.add_elements_to_buffer(elements=starting_elements)
 
         appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
+        fake_node.add_elements_to_buffer(elements=appending_elements)
 
         self.assertEqual(len(fake_node.buffer_block_ids), 2)
 
@@ -112,10 +112,10 @@ class TestBasicStructure(unittest.TestCase):
         node_id = fake_node.node_id
 
         starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
+        fake_node.add_elements_to_buffer(elements=starting_elements)
 
         appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
+        fake_node.add_elements_to_buffer(elements=appending_elements)
 
         self.assertEqual(len(fake_node.buffer_block_ids), 2)
         self.assertEqual(fake_node.last_buffer_size, B)
@@ -133,10 +133,10 @@ class TestBasicStructure(unittest.TestCase):
         node_id = fake_node.node_id
 
         starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B-1)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
+        fake_node.add_elements_to_buffer(elements=starting_elements)
 
         last_element = BufferElement(f'Ending_Element', Action.INSERT)
-        fake_node.add_elements_to_buffer(parent_path=None, elements=[last_element])
+        fake_node.add_elements_to_buffer(elements=[last_element])
 
         self.assertEqual(len(fake_node.buffer_block_ids), 1)
 
@@ -151,10 +151,10 @@ class TestBasicStructure(unittest.TestCase):
         node_id = fake_node.node_id
 
         starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B-1)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=starting_elements)
+        fake_node.add_elements_to_buffer(elements=starting_elements)
 
         appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(2)]
-        fake_node.add_elements_to_buffer(parent_path=None, elements=appending_elements)
+        fake_node.add_elements_to_buffer(elements=appending_elements)
 
         self.assertEqual(len(fake_node.buffer_block_ids), 2)
 
