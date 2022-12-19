@@ -3,7 +3,7 @@ from current_implementation.new_buffer_tree import ChildParent
 from current_implementation.double_linked_list import DoublyLinkedList
 
 
-class TestBasicStructure(unittest.TestCase):
+class TestDoubleLinkedList(unittest.TestCase):
     def setUp(self):
         self.linked_list = DoublyLinkedList()
         self.child_parent_string = ChildParent('1234', None)
