@@ -1,12 +1,9 @@
 import math
 from current_implementation.buffer_element import *
 from current_implementation.constants_and_helpers import *
-from collections import namedtuple
 from current_implementation.double_linked_list import DoublyLinkedList
 from current_implementation.merge_sort import external_merge_sort_buffer_elements_many_files
 from collections import deque
-
-ChildParent = namedtuple('ChildParent', field_names=['child', 'parent'])
 
 
 class BufferTree:
@@ -32,7 +29,7 @@ class BufferTree:
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_block_ids=[])
         self.root = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
-        self.internal_node_emptying_queue = []
+        self.internal_node_emptying_queue = deque()
         self.leaf_node_emptying_queue = DoublyLinkedList()
 
         BufferTree.tree_instance = self
@@ -66,10 +63,11 @@ class BufferTree:
             self.tree_buffer.clear_elements()
 
             if root.buffer_is_full():
+                # At this point the queues should still be empty, so no checks to whether root is already present are necessary
                 if root.is_internal_node():
-                    self.internal_node_emptying_queue.append(ChildParent(root.node_id, None))
+                    self.internal_node_emptying_queue.append(root.node_id)
                 else:
-                    self.leaf_node_emptying_queue.append(ChildParent(root.node_id, None))
+                    self.leaf_node_emptying_queue.append(root.node_id)
                 self.clear_all_full_buffers()
 
     def clear_all_full_buffers(self):
@@ -78,14 +76,14 @@ class BufferTree:
 
     def clear_full_internal_buffers(self):
         while self.internal_node_emptying_queue:
-            node_id, parent_id = self.internal_node_emptying_queue.pop(0)
+            node_id = self.internal_node_emptying_queue.popleft()
             node = load_node(node_id)
             node.clear_internal_buffer()
             write_node(node)
 
     def clear_full_leaf_buffers(self):
         while not self.leaf_node_emptying_queue.is_empty():
-            node_id, parent_id = self.leaf_node_emptying_queue.pop_first()
+            node_id = self.leaf_node_emptying_queue.pop_first()
             node = load_node(node_id)
 
             requires_deleting = node.clear_leaf_buffer()
@@ -158,11 +156,13 @@ class TreeNode:
             self.last_buffer_size = elements_to_add
 
         if self.buffer_is_full():
-            # TODO We need to check first whether the node might already be in the queue. Edit: Do we really need to check that? Is that possible?
             if self.is_internal_node():
-                tree.internal_node_emptying_queue.insert(0, ChildParent(self.node_id, parent_path))
+                # Since we load a specific amount of blocks repeatedly, we might add the same one repeatedly after each other
+                if tree.internal_node_emptying_queue and tree.internal_node_emptying_queue[0] != self.node_id:
+                    tree.internal_node_emptying_queue.appendleft(self.node_id)
             else:
-                tree.leaf_node_emptying_queue.append(ChildParent(self.node_id, parent_path))
+                if not tree.leaf_node_emptying_queue.is_empty() and tree.leaf_node_emptying_queue.get_last_without_popping() != self.node_id:
+                    tree.leaf_node_emptying_queue.append(self.node_id)
 
     def buffer_is_full(self):
         tree = BufferTree.tree_instance
