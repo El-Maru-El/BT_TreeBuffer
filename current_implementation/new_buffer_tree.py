@@ -211,6 +211,7 @@ class TreeNode:
             # TODO
             pass
         elif len(self.children_paths) < num_children_before:
+            # TODO If node-merging is triggered, check whether other node is in buffer-emptying-queue already
             # TODO
             pass
 
