@@ -54,7 +54,7 @@ def generate_new_leaf_id():
 
 
 # Returns the node_id, by which the rest of file-paths can be reconstructed
-def generate_new_nodes_dir():
+def generate_new_node_dir():
     new_node_id = get_new_node_id()
     generate_node_dir_for_id(new_node_id)
     return new_node_id

@@ -97,9 +97,10 @@ class BufferTree:
 
 
 class TreeNode:
-    def __init__(self, node_id=None, is_internal_node=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_id=None):
+    def __init__(self, is_internal_node, node_id=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_id=None):
+
         if node_id is None:
-            node_id = generate_new_nodes_dir()
+            node_id = generate_new_node_dir()
 
         if buffer_block_ids is None:
             buffer_block_ids = []
@@ -342,6 +343,9 @@ class TreeNode:
         """ Eliminates elements of the passed list if the element key exists several times. Only keeps last entry.
             Expects list to be sorted before call."""
         # following list will contain all indices of elements to be deleted in descending order
+        if not elements:
+            return
+
         indices_to_del = deque()
         for i in range(len(elements)-1):
             if elements[i].element == elements[i+1].element:
