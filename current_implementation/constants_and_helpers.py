@@ -11,7 +11,6 @@ NODES_DIR = os.path.join(RESOURCES_DIR, 'nodes_collection')
 LEAVES_DIR = os.path.join(RESOURCES_DIR, 'leaves_collection')
 NODE_STRING = 'node_'
 NODE_INFORMATION_FILE_STRING = 'data.txt'
-TIMESTAMP_FORMAT = '%Y_%m_%d-%H_%M_%S_%f'
 BLOCK_STRING = 'block_'
 LEAF_STRING = 'leaf_'
 SORTED_STRING = 'sorted_'
@@ -54,7 +53,7 @@ def generate_new_leaf_id():
 
 
 # Returns the node_id, by which the rest of file-paths can be reconstructed
-def generate_new_nodes_dir():
+def generate_new_node_dir():
     new_node_id = get_new_node_id()
     generate_node_dir_for_id(new_node_id)
     return new_node_id
@@ -72,8 +71,8 @@ def get_node_dir_path_from_id(node_id):
 
 
 # Returns Node directory name
-def nodes_dir_name_from_id(timestamp):
-    return NODE_STRING + timestamp
+def nodes_dir_name_from_id(node_id):
+    return NODE_STRING + node_id
 
 
 # Returns node meta information file path

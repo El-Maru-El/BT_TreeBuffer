@@ -97,9 +97,10 @@ class BufferTree:
 
 
 class TreeNode:
-    def __init__(self, node_id=None, is_internal_node=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_id=None):
+    def __init__(self, is_internal_node, node_id=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_id=None):
+
         if node_id is None:
-            node_id = generate_new_nodes_dir()
+            node_id = generate_new_node_dir()
 
         if buffer_block_ids is None:
             buffer_block_ids = []
@@ -342,13 +343,25 @@ class TreeNode:
         """ Eliminates elements of the passed list if the element key exists several times. Only keeps last entry.
             Expects list to be sorted before call."""
         # following list will contain all indices of elements to be deleted in descending order
-        indices_to_del = []
-        for i, elem in enumerate(elements):
-            if i + 1 < len(elements) and elements[i+1].key == elem.key:
-                indices_to_del.insert(0, i)
+        if not elements:
+            return
 
-        for i in indices_to_del:
-            del elements[i]
+        indices_to_del = deque()
+        for i in range(len(elements)-1):
+            if elements[i].element == elements[i+1].element:
+                indices_to_del.appendleft(i)
+
+        new_list = []
+        for i in range(len(elements)-1):
+            if elements[i].element != elements[i + 1].element:
+                new_list.append(elements[i])
+        new_list.append(elements[-1])
+
+        del elements[:]
+        return new_list
+
+        # for i in indices_to_del:
+        #     del elements[i]
 
     def read_leaf_block_elements_as_deque(self, consumed_child_counter):
         if consumed_child_counter == len(self.children_ids):
@@ -456,8 +469,8 @@ def write_node(node: TreeNode):
 
 # Buffer Block Structure:
 # Each line: Element;Timestamp;Action
-def read_buffer_block_elements(node_id, block_timestamp):
-    block_filepath = get_buffer_file_path_from_ids(node_id, block_timestamp)
+def read_buffer_block_elements(node_id, buffer_block_id):
+    block_filepath = get_buffer_file_path_from_ids(node_id, buffer_block_id)
 
     return read_buffer_elements_from_file_path(block_filepath)
 
@@ -488,12 +501,12 @@ def append_to_buffer(node_id, buffer_block_id, elements):
 
 def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_block_ids):
     elements = load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids)
-    elements.sort(key=lambda e: (e.key, e.timestamp))
-    TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
-    return elements
+    elements.sort(key=lambda e: (e.element, e.timestamp))
+    elements_trimmed = TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
+    return elements_trimmed
 
 
-def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids):
+def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids) -> list:
     elements = []
     [elements.extend(read_buffer_block_elements(node_id, block_timestamp)) for block_timestamp in buffer_block_ids]
     return elements

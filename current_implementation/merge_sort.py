@@ -7,7 +7,7 @@ from current_implementation.buffer_element import get_buffer_elements_from_sorte
 def external_merge_sort_buffer_elements_many_files(node_id, sorted_ids, max_elements):
     """ Assumes each file passed is sorted and does not contain duplicates. """
     if not sorted_ids:
-        raise ValueError(f"Tried merge sort for node with timestamp {node_id}, but sorted_ids is {sorted_ids}")
+        raise ValueError(f"Tried merge sort for node with node_id {node_id}, but sorted_ids is {sorted_ids}")
 
     while len(sorted_ids) > 1:
         new_sorted_ids = []
