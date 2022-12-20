@@ -347,8 +347,17 @@ class TreeNode:
             if elements[i].element == elements[i+1].element:
                 indices_to_del.appendleft(i)
 
-        for i in indices_to_del:
-            del elements[i]
+        new_list = []
+        for i in range(len(elements)-1):
+            if elements[i].element != elements[i + 1].element:
+                new_list.append(elements[i])
+        new_list.append(elements[-1])
+
+        del elements[:]
+        return new_list
+
+        # for i in indices_to_del:
+        #     del elements[i]
 
     def read_leaf_block_elements_as_deque(self, consumed_child_counter):
         if consumed_child_counter == len(self.children_ids):
@@ -489,8 +498,8 @@ def append_to_buffer(node_id, buffer_block_id, elements):
 def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_block_ids):
     elements = load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids)
     elements.sort(key=lambda e: (e.key, e.timestamp))
-    TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
-    return elements
+    elements_trimmed = TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
+    return elements_trimmed
 
 
 def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids) -> list:

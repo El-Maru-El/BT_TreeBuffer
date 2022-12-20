@@ -21,7 +21,7 @@ class TestTreeNode(unittest.TestCase):
             buffer_elements_to_be_trimmed.insert(ind+1, new_buffer_element)
             expected_buffer_elements[ind] = new_buffer_element
 
-        TreeNode.annihilate_insertions_deletions_with_matching_timestamps(buffer_elements_to_be_trimmed)
+        elements_trimmed = TreeNode.annihilate_insertions_deletions_with_matching_timestamps(buffer_elements_to_be_trimmed)
 
-        self.assertEqual(buffer_elements_to_be_trimmed, expected_buffer_elements)
+        self.assertEqual(elements_trimmed, expected_buffer_elements)
 
