@@ -1,4 +1,4 @@
-# Double Linked List with special look up in O(1) (only works for ChildParent Tuple)
+# Double Linked List with special look up in O(1) (Designed for node_ids which are strings)
 class DoublyLinkedList:
     def __init__(self):
         self.first = None

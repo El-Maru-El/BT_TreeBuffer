@@ -469,8 +469,8 @@ def write_node(node: TreeNode):
 
 # Buffer Block Structure:
 # Each line: Element;Timestamp;Action
-def read_buffer_block_elements(node_id, block_timestamp):
-    block_filepath = get_buffer_file_path_from_ids(node_id, block_timestamp)
+def read_buffer_block_elements(node_id, buffer_block_id):
+    block_filepath = get_buffer_file_path_from_ids(node_id, buffer_block_id)
 
     return read_buffer_elements_from_file_path(block_filepath)
 
@@ -501,7 +501,7 @@ def append_to_buffer(node_id, buffer_block_id, elements):
 
 def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_block_ids):
     elements = load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids)
-    elements.sort(key=lambda e: (e.key, e.timestamp))
+    elements.sort(key=lambda e: (e.element, e.timestamp))
     elements_trimmed = TreeNode.annihilate_insertions_deletions_with_matching_timestamps(elements)
     return elements_trimmed
 
