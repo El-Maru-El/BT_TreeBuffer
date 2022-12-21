@@ -125,9 +125,6 @@ class TreeNode:
         return generate_new_buffer_block_id(len(self.buffer_block_ids))
 
     def is_internal_node(self):
-        if self.is_intern is None:
-            raise ValueError("Tried accessing field is_internal_node before setting it.")
-
         return self.is_intern
 
     def add_block_to_buffer(self, elements):
@@ -190,9 +187,10 @@ class TreeNode:
         """ Read_size = How many files to read at once. Also deletes the buffer blocks from external memory and modifies self.buffer_block_ids. """
         blocks_to_read = self.buffer_block_ids[:read_size]
         self.buffer_block_ids = self.buffer_block_ids[read_size:]
-        delete_several_buffer_files_with_ids(self.node_id, blocks_to_read)
+        elements = load_buffer_blocks_sort_and_remove_duplicates(self.node_id, blocks_to_read)
 
-        return load_buffer_blocks_sort_and_remove_duplicates(self.node_id, blocks_to_read)
+        delete_several_buffer_files_with_ids(self.node_id, blocks_to_read)
+        return elements
 
     def clear_leaf_buffer(self):
         tree = BufferTree.tree_instance
@@ -362,9 +360,6 @@ class TreeNode:
 
         del elements[:]
         return new_list
-
-        # for i in indices_to_del:
-        #     del elements[i]
 
     def read_leaf_block_elements_as_deque(self, consumed_child_counter):
         if consumed_child_counter == len(self.children_ids):
