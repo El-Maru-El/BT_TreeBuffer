@@ -67,6 +67,64 @@ class TestTreeNode(unittest.TestCase):
         self.assertEqual(middle_reloaded_buffer, middle_elements)
         self.assertEqual(right_reloaded_buffer, right_elements)
 
+    def test_merge_sorted_buffer_with_leaf_blocks(self):
+        tree = self.create_dummy_tree()
+        biggest_int = tree.B * 4
+        old_leaf_ids = [generate_new_leaf_id(), generate_new_leaf_id()]
+
+        # First leaf block:     All even numbers in interval    [0; 2 * B[
+        # Second leaf block:    All even numbers in interval    [2 * B, 4 * B[
+        # Sorted buffer ele:    All uneven numbers in interval  [0; 4 * B]
+        first_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(0, 2 * tree.B, 2)]
+        second_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(2 * tree.B, 4 * tree.B, 2)]
+        sorted_buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in range(1, 4 * tree.B + 1, 2)]
+
+        quick_check_failure_message = 'You did not implement the input Leaf and Buffer Data as intended'
+        self.assertEqual(len(first_leaf_elements), tree.B, quick_check_failure_message)
+        self.assertEqual(len(second_leaf_elements), tree.B, quick_check_failure_message)
+        self.assertEqual(len(sorted_buffer_elements), 2 * tree.B, quick_check_failure_message)
+
+        write_leaf_block(old_leaf_ids[0], first_leaf_elements)
+        write_leaf_block(old_leaf_ids[1], second_leaf_elements)
+        leaf_node = TreeNode(is_internal_node=False, children=old_leaf_ids, handles=first_leaf_elements[-1])
+        sorted_id = get_new_sorted_id()
+        append_to_sorted_buffer_elements_file(leaf_node.node_id, sorted_id, sorted_buffer_elements)
+
+        sorted_filepath = get_sorted_file_path_from_ids(leaf_node.node_id, sorted_id)
+        leaf_node.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
+
+        all_elements_before_unsorted = []
+        all_elements_before_unsorted.extend(first_leaf_elements)
+        all_elements_before_unsorted.extend(second_leaf_elements)
+        for buffer_element in sorted_buffer_elements:
+            all_elements_before_unsorted.append(buffer_element.element)
+
+        sorted_elements_before_writing = sorted(all_elements_before_unsorted)
+
+        # Is node metadata correct?
+        expected_split_keys = [create_string_from_int(i, biggest_int) for i in [tree.B - 1, 2 * tree.B - 1, 3 * tree.B - 1]]
+        self.assertEqual(len(leaf_node.children_ids), 4)
+        self.assertEqual(expected_split_keys, leaf_node.handles)
+
+        reloaded_leaf_lists = [list(read_leaf_block_elements_as_deque(leaf_id)) for leaf_id in leaf_node.children_ids]
+        reloaded_leaf_elements = [element for sublist in reloaded_leaf_lists for element in sublist]
+
+        # Are each of the new Leaf IDs correct?
+        self.assertEqual(reloaded_leaf_lists[0], sorted_elements_before_writing[:tree.B])
+        self.assertEqual(reloaded_leaf_lists[1], sorted_elements_before_writing[tree.B:2 * tree.B])
+        self.assertEqual(reloaded_leaf_lists[2], sorted_elements_before_writing[2 * tree.B:3 * tree.B])
+        self.assertEqual(reloaded_leaf_lists[3], sorted_elements_before_writing[3 * tree.B:4 * tree.B])
+        self.assertEqual(sorted_elements_before_writing, reloaded_leaf_elements)
+
+        # Have the corresponding files been deleted?
+        file_not_deleted_message = 'File should have been deleted'
+        for leaf_id in old_leaf_ids:
+            self.assertFalse(os.path.exists(get_leaf_file_path_from_id(leaf_id)), file_not_deleted_message)
+        self.assertFalse(os.path.exists(get_sorted_file_path_from_ids(leaf_node.node_id, sorted_id)))
+
+    def test_merge_on_empty_root_node(self):
+        # TODO
+        pass
 
     @staticmethod
     def create_dummy_tree():
@@ -74,3 +132,7 @@ class TestTreeNode(unittest.TestCase):
         B = 1024
 
         return BufferTree(M=M, B=B)
+
+    def assert_list_is_incrementing_by_1(self, some_list_of_strings, failure_message):
+        for i in range(1, len(some_list_of_strings)):
+            self.assertEqual(int(some_list_of_strings[i-1]) + 1, int(some_list_of_strings[i]), failure_message)
