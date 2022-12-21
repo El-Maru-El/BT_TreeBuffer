@@ -96,6 +96,8 @@ class BufferTree:
                 # TODO Does anything have to be done? Don't think so not sure yet though
                 pass
 
+            write_node(node)
+
 
 class TreeNode:
     def __init__(self, is_internal_node, node_id=None, handles=None, children=None, buffer_block_ids=None, last_buffer_size=0, parent_id=None):
@@ -183,6 +185,8 @@ class TreeNode:
             elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
             self.pass_elements_to_children(elements)
 
+        self.last_buffer_size = 0
+
     def read_sort_and_remove_duplicates_from_buffer_files_with_read_size(self, read_size):
         """ Read_size = How many files to read at once. Also deletes the buffer blocks from external memory and modifies self.buffer_block_ids. """
         blocks_to_read = self.buffer_block_ids[:read_size]
@@ -201,6 +205,8 @@ class TreeNode:
         # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
         sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
         sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
+        self.last_buffer_size = 0
+
         # TODO Once file is sorted, do the rest of the work
 
         self.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
