@@ -32,12 +32,15 @@ class Action(str, Enum):
 
 def get_buffer_elements_from_sorted_filereader_into_deque(file_reader, max_lines):
     """ Reads the next lines from the file_reader and directly parses each line into Buffer Element. Return is collections.deque. """
+    if not max_lines:
+        raise ValueError(f"sorted_filereader was instructed to read {max_lines}. This doesn't work")
+
     lines = deque()
     for line in file_reader:
-        if not max_lines:
-            break
         lines.append(parse_line_into_buffer_element(line))
         max_lines -= 1
+        if not max_lines:
+            break
 
     if not lines:
         return None
