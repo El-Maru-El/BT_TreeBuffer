@@ -281,20 +281,20 @@ class TreeNode:
                         consumed_child_counter += 1
                         old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
 
-                if new_leaf_block_elements:
-                    new_leaf()
-
             if sorted_buffer_elements:
                 while sorted_buffer_elements is not None:
-                    new_leaf_block_elements.append(sorted_buffer_elements.popleft().element)
+                    buffer_element = sorted_buffer_elements.popleft()
+                    if buffer_element.action == Action.INSERT:
+                        new_leaf_block_elements.append(buffer_element.element)
 
                     if len(new_leaf_block_elements) == block_size:
                         new_leaf()
 
                     if not sorted_buffer_elements:
                         sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
-                if new_leaf_block_elements:
-                    new_leaf()
+
+            if new_leaf_block_elements:
+                new_leaf()
 
         delete_filepath(sorted_filepath)
         delete_old_leaves(self.children_ids)

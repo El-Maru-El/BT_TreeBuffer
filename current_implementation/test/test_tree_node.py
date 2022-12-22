@@ -67,7 +67,7 @@ class TestTreeNode(unittest.TestCase):
         self.assertEqual(middle_reloaded_buffer, middle_elements)
         self.assertEqual(right_reloaded_buffer, right_elements)
 
-    def test_merge_sorted_buffer_with_leaf_blocks(self):
+    def test_merge_sorted_buffer_with_leaf_blocks_perfect_complete_blocks(self):
         tree = self.create_dummy_tree()
         biggest_int = tree.B * 4
         old_leaf_ids = [generate_new_leaf_id(), generate_new_leaf_id()]
@@ -121,6 +121,46 @@ class TestTreeNode(unittest.TestCase):
         for leaf_id in old_leaf_ids:
             self.assertFalse(os.path.exists(get_leaf_file_path_from_id(leaf_id)), file_not_deleted_message)
         self.assertFalse(os.path.exists(get_sorted_file_path_from_ids(leaf_node.node_id, sorted_id)))
+
+    def test_merge_sorted_buffer_with_leaf_blocks_incomplete_blocks(self):
+        tree = self.create_dummy_tree()
+        biggest_int = tree.B * 4
+        old_leaf_ids = [generate_new_leaf_id(), generate_new_leaf_id()]
+
+        # First leaf block:     All even numbers in interval    [0; 2 * B[
+        # Second leaf block:    All even numbers in interval    [2 * B, 4 * B[
+        # Sorted buffer ele:    All numbers in interval         [0; 2.5 * B[
+        first_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(0, 2 * tree.B, 2)]
+        second_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(2 * tree.B, 4 * tree.B, 2)]
+        sorted_buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in range(0, int(2.5 * tree.B))]
+
+        write_leaf_block(old_leaf_ids[0], first_leaf_elements)
+        write_leaf_block(old_leaf_ids[1], second_leaf_elements)
+        leaf_node = TreeNode(is_internal_node=False, children=old_leaf_ids, handles=first_leaf_elements[-1])
+        sorted_id = get_new_sorted_id()
+        append_to_sorted_buffer_elements_file(leaf_node.node_id, sorted_id, sorted_buffer_elements)
+
+        sorted_filepath = get_sorted_file_path_from_ids(leaf_node.node_id, sorted_id)
+        leaf_node.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
+
+        expected_split_keys_as_int = [tree.B - 1, 2 * tree.B - 1, int(3.5 * tree.B) - 2]
+        expected_split_keys = [create_string_from_int(i, biggest_int) for i in expected_split_keys_as_int]
+
+        # Is node metadata correct?
+        self.assertEqual(4, len(leaf_node.children_ids))
+        self.assertEqual(expected_split_keys, leaf_node.handles)
+
+        expected_first_leaf = [create_string_from_int(i, biggest_int) for i in range(tree.B)]
+        expected_second_leaf = [create_string_from_int(i, biggest_int) for i in range(tree.B, 2 * tree.B)]
+        expected_third_leaf = [create_string_from_int(i, biggest_int) for i in range(2 * tree.B, int(2.5 * tree.B))]
+        rest_elements = [create_string_from_int(i, biggest_int) for i in range(int(2.5 * tree.B), 4 * tree.B, 2)]
+        expected_third_leaf.extend(rest_elements[:tree.B // 2])
+        expected_fourth_leaf = rest_elements[tree.B // 2:]
+        reloaded_leaf_lists = [list(read_leaf_block_elements_as_deque(leaf_id)) for leaf_id in leaf_node.children_ids]
+        self.assertEqual(reloaded_leaf_lists[0], expected_first_leaf)
+        self.assertEqual(reloaded_leaf_lists[1], expected_second_leaf)
+        self.assertEqual(reloaded_leaf_lists[2], expected_third_leaf)
+        self.assertEqual(reloaded_leaf_lists[3], expected_fourth_leaf)
 
     def test_creating_root_buffer(self):
         tree = self.create_dummy_tree()
