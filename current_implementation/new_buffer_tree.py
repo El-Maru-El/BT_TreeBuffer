@@ -31,6 +31,7 @@ class BufferTree:
         self.tree_buffer = TreeBuffer(max_size=self.B)
         self.internal_node_emptying_queue = deque()
         self.leaf_node_emptying_queue = DoublyLinkedList()
+        self.split_queue = deque()
 
         BufferTree.tree_instance = self
         write_node(root_node)
@@ -87,14 +88,10 @@ class BufferTree:
             node_id = self.leaf_node_emptying_queue.pop_first()
             node = load_node(node_id)
 
-            requires_deleting = node.clear_leaf_buffer()
+            node.clear_leaf_buffer()
 
-            if requires_deleting:
-                # TODO
-                pass
-            else:
-                # TODO Does anything have to be done? Don't think so not sure yet though
-                pass
+            # TODO Does anything have to be done? Don't think so not sure yet though
+            # TODO What about merges? Where will those be handled?
 
             write_node(node)
 
@@ -199,7 +196,6 @@ class TreeNode:
     def clear_leaf_buffer(self):
         tree = BufferTree.tree_instance
 
-        required_delete_from_outside = False
         num_children_before = len(self.children_ids)
 
         # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
@@ -212,14 +208,119 @@ class TreeNode:
         self.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
 
         if len(self.children_ids) > num_children_before:
-            # TODO
-            pass
+            handle_child_id_tuples = self.identify_handles_and_split_keys_to_be_inserted(num_children_before)
+            # TODO How to do this? doesn't work yet, function doesn't exist
+            self.insert_new_children(handle_child_id_tuples=handle_child_id_tuples)
+
+            # for split_key, child_id in handle_child_id_tuples:
+            #     self.insert_new_child(split_key, child_id)
+
         elif len(self.children_ids) < num_children_before:
-            # TODO If node-merging is triggered, check whether other node is in buffer-emptying-queue already
-            # TODO
+            # TODO If node-merging is triggered, check whether neighbor node is in buffer-emptying-queue already
+            # TODO Also consider if node is the root node:
+            #  If is_internal_node: min-children = 2
+            #  Else: min_children = 0 :)
             pass
 
-        return required_delete_from_outside
+    def insert_new_children(self, handle_child_id_tuples):
+        tree = BufferTree.tree_instance
+        for split_key, child_id in handle_child_id_tuples:
+            self.handles.append(split_key)
+            self.children_ids.append(child_id)
+            if len(self.children_ids) > tree.b:
+                self.split_leaf_node()
+
+    def split_leaf_node(self):
+        self.split_node()
+        tree = BufferTree.tree_instance
+        while tree.split_queue:
+            node_instance_to_be_split = tree.split_queue.popleft()
+            node_instance_to_be_split.split_node()
+            write_node(node_instance_to_be_split)
+
+    def split_node(self, loaded_child_node=None):
+        # self is always read and written back to ext. memory from outside this current run
+        tree = BufferTree.tree_instance
+        if len(self.handles) != tree.b or len(self.children_ids) != tree.b + 1:
+            raise ValueError(f"Tried splitting node {self.node_id}, but: b = {tree.b}, num handles = {len(self.handles)}, num children = {len(self.children_ids)}")
+
+        tree = BufferTree.tree_instance
+        if self.is_root():
+            # Create new root
+            parent_node = TreeNode(is_internal_node=False, children=[self.node_id])
+            self.parent_id = parent_node.node_id
+            tree.root_node_id = parent_node.node_id
+            self.is_intern = False
+        else:
+            parent_node = load_node(self.parent_id)
+
+        # Since b % 4 == 0, we know:
+        #   len(self.children_ids) = b + 1 = odd
+        #   -> len(self.handles) = b = even
+
+        num_children_for_left_neighbor = tree.b // 2
+        # Since the most-right split-key of the left half of self.handles goes to parent:
+        num_handles_for_left_neighbor = (tree.b // 2) - 1
+
+        handle_for_parent = self.handles[tree.b // 2]
+
+        handles_for_left_neighbor = self.handles[:num_handles_for_left_neighbor]
+        self.handles = self.handles[1 + num_handles_for_left_neighbor:]
+
+        children_ids_for_left_neighbor = self.children_ids[:num_children_for_left_neighbor]
+        self.children_ids = self.children_ids[:num_children_for_left_neighbor]
+
+        new_left_neighbor_node = TreeNode(is_internal_node=self.is_internal_node(), handles=handles_for_left_neighbor, children=children_ids_for_left_neighbor, parent_id=self.parent_id)
+
+        index_in_parent = parent_node.index_for_child_id(self.node_id)
+        parent_node.children_ids.insert(index_in_parent, new_left_neighbor_node)
+        parent_node.handles.insert(index_in_parent, handle_for_parent)
+
+        write_node(new_left_neighbor_node)
+
+        if self.is_internal_node():
+            write_node(self)
+
+        if len(parent_node.children_ids) > tree.b:
+            if not self.is_internal_node():
+                parent_node.split_node(loaded_child_node=self)
+            else:
+                tree.split_queue.append(parent_node)
+        else:
+            # Parent didn't split, so we write it back to ext. memory ourselves:
+            write_node(parent_node)
+
+        for passed_child_id in children_ids_for_left_neighbor:
+            # The child is the Leaf-Node that called us to split, so it has a running instance that wants to be updated
+            if loaded_child_node and loaded_child_node.node_id == passed_child_id:
+                loaded_child_node.parent_id = new_left_neighbor_node.node_id
+            else:
+                passed_child_node = load_node(passed_child_id)
+                passed_child_node.parent_id = new_left_neighbor_node.node_id
+                write_node(passed_child_node)
+
+    def index_for_child_id(self, find_id):
+        return self.children_ids.index(find_id)
+
+    def identify_handles_and_split_keys_to_be_inserted(self, num_children_before):
+        if num_children_before > 0:
+            # num_to_be_inserted will always be > 0, so the list trimming will work find
+            num_to_be_inserted = len(self.children_ids) - num_children_before
+            split_keys_to_be_inserted = self.handles[-num_to_be_inserted:]
+            self.handles = self.handles[:num_children_before - 1]
+            children_to_be_inserted = self.children_ids[-num_to_be_inserted:]
+            self.children_ids = self.children_ids[:num_children_before]
+        else:
+            # len(self.children_ids) - num_children_before == 0
+            split_keys_to_be_inserted = self.handles
+            self.handles = []
+            children_to_be_inserted = self.children_ids[1:]
+            self.children_ids = self.children_ids[:1]
+
+        if len(split_keys_to_be_inserted) != len(children_to_be_inserted):
+            raise ValueError("Something was implemented incorrectly in this method, split-keys and children-ids to be inserted are of different length")
+
+        return list(zip(split_keys_to_be_inserted, children_to_be_inserted))
 
     def merge_sorted_buffer_with_leaf_blocks(self, sorted_filepath):
         def new_leaf():
@@ -299,7 +400,8 @@ class TreeNode:
         delete_filepath(sorted_filepath)
         delete_old_leaves(self.children_ids)
         # The last split-key is not necessary, so delete it (since len(split_keys) == len(children) - 1 unless len(children==0)
-        del new_split_keys[-1]
+        if new_split_keys:
+            del new_split_keys[-1]
         self.handles = new_split_keys
         self.children_ids = new_leaf_ids
 
@@ -412,6 +514,9 @@ class NodeBufferBlock:
 # Node structure ideas:
 # is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block, parent_id
 def load_node(node_id) -> TreeNode:
+    if node_id is None:
+        raise ValueError("Tried loading node, but node_id was not provided (is None)")
+
     file_path = node_information_file_path_from_id(node_id)
     with open(file_path, 'r') as f:
         data = f.read().split(SEP)
