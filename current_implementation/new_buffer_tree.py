@@ -213,9 +213,6 @@ class TreeNode:
             # TODO How to do this? doesn't work yet, function doesn't exist
             self.insert_new_children(handle_child_id_tuples=handle_child_id_tuples)
 
-            # for split_key, child_id in handle_child_id_tuples:
-            #     self.insert_new_child(split_key, child_id)
-
         elif len(self.children_ids) < num_children_before:
             # TODO If node-merging is triggered, check whether neighbor node is in buffer-emptying-queue already
             # TODO Also consider if node is the root node:
