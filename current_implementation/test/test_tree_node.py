@@ -210,6 +210,46 @@ class TestTreeNode(unittest.TestCase):
         self.assertEqual([], root_node.buffer_block_ids)
         self.assertEqual(0, root_node.last_buffer_size)
 
+    def test_identify_handles_and_split_keys_to_be_inserted_non_empty_node(self):
+        num_children_before = 3
+        old_children_ids = [str(i) for i in range(num_children_before)]
+        old_split_keys = [str(i)*4 for i in range(num_children_before - 1)]
+        num_new_children = 2
+        new_children_ids = [str(i) for i in range(num_children_before, num_children_before + num_new_children)]
+        new_split_keys = [str(i)*4 for i in range(num_children_before - 1, num_children_before + num_new_children - 1)]
+
+        some_node = TreeNode(is_internal_node=False, handles=old_split_keys + new_split_keys, children=old_children_ids + new_children_ids)
+        self.assertEqual(len(some_node.handles), len(some_node.children_ids) - 1, 'Test node has been set up incorrectly')
+
+        handle_child_id_tuples = some_node.identify_handles_and_split_keys_to_be_inserted(num_children_before)
+
+        # Check returned stuff
+        self.assertEqual(2, len(handle_child_id_tuples))
+        self.assertEqual((new_split_keys[0], new_children_ids[0]), handle_child_id_tuples[0])
+        self.assertEqual((new_split_keys[1], new_children_ids[1]), handle_child_id_tuples[1])
+
+        # Check that node is set correctly
+        self.assertEqual(old_children_ids, some_node.children_ids)
+        self.assertEqual(old_split_keys, some_node.handles)
+
+    def test_identify_handles_and_split_keys_to_be_inserted_empty_node(self):
+        num_children_before = 0
+        num_new_children = 2
+        new_children_ids = [str(i) for i in range(num_new_children)]
+        new_split_keys = [str(i)*4 for i in range(num_new_children - 1)]
+
+        some_node = TreeNode(is_internal_node=False, handles=new_split_keys, children=new_children_ids)
+        self.assertEqual(len(some_node.handles), len(some_node.children_ids) - 1, 'Test node has been set up incorrectly')
+
+        handle_child_id_tuples = some_node.identify_handles_and_split_keys_to_be_inserted(num_children_before)
+        # Check returned stuff
+        self.assertEqual(1, len(handle_child_id_tuples))
+        self.assertEqual((new_split_keys[0], new_children_ids[1]), handle_child_id_tuples[0])
+
+        # Check that node is set correctly
+        self.assertEqual([new_children_ids[0]], some_node.children_ids)
+        self.assertEqual([], some_node.handles)
+
     @staticmethod
     def create_dummy_tree():
         M = 2 * 4096
