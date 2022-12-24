@@ -194,6 +194,7 @@ class TreeNode:
         return elements
 
     def clear_leaf_buffer(self):
+        # self node is written in callee
         tree = BufferTree.tree_instance
 
         num_children_before = len(self.children_ids)
@@ -223,6 +224,8 @@ class TreeNode:
             pass
 
     def insert_new_children(self, handle_child_id_tuples):
+        # self node is written in callee
+
         tree = BufferTree.tree_instance
         for split_key, child_id in handle_child_id_tuples:
             self.handles.append(split_key)
@@ -231,6 +234,8 @@ class TreeNode:
                 self.split_leaf_node()
 
     def split_leaf_node(self):
+        # self node is written in callee
+
         self.split_node()
         tree = BufferTree.tree_instance
         while tree.split_queue:
@@ -239,7 +244,7 @@ class TreeNode:
             write_node(node_instance_to_be_split)
 
     def split_node(self, loaded_child_node=None):
-        # self is always read and written back to ext. memory from outside this current run
+        # self node is written somewhere in callee
         tree = BufferTree.tree_instance
         if len(self.handles) != tree.b or len(self.children_ids) != tree.b + 1:
             raise ValueError(f"Tried splitting node {self.node_id}, but: b = {tree.b}, num handles = {len(self.handles)}, num children = {len(self.children_ids)}")
@@ -247,7 +252,7 @@ class TreeNode:
         tree = BufferTree.tree_instance
         if self.is_root():
             # Create new root
-            parent_node = TreeNode(is_internal_node=False, children=[self.node_id])
+            parent_node = TreeNode(is_internal_node=True, children=[self.node_id])
             self.parent_id = parent_node.node_id
             tree.root_node_id = parent_node.node_id
             self.is_intern = False
@@ -262,18 +267,18 @@ class TreeNode:
         # Since the most-right split-key of the left half of self.handles goes to parent:
         num_handles_for_left_neighbor = (tree.b // 2) - 1
 
-        handle_for_parent = self.handles[tree.b // 2]
+        handle_for_parent = self.handles[tree.b // 2 - 1]
 
         handles_for_left_neighbor = self.handles[:num_handles_for_left_neighbor]
         self.handles = self.handles[1 + num_handles_for_left_neighbor:]
 
         children_ids_for_left_neighbor = self.children_ids[:num_children_for_left_neighbor]
-        self.children_ids = self.children_ids[:num_children_for_left_neighbor]
+        self.children_ids = self.children_ids[num_children_for_left_neighbor:]
 
         new_left_neighbor_node = TreeNode(is_internal_node=self.is_internal_node(), handles=handles_for_left_neighbor, children=children_ids_for_left_neighbor, parent_id=self.parent_id)
 
         index_in_parent = parent_node.index_for_child_id(self.node_id)
-        parent_node.children_ids.insert(index_in_parent, new_left_neighbor_node)
+        parent_node.children_ids.insert(index_in_parent, new_left_neighbor_node.node_id)
         parent_node.handles.insert(index_in_parent, handle_for_parent)
 
         write_node(new_left_neighbor_node)
@@ -290,14 +295,18 @@ class TreeNode:
             # Parent didn't split, so we write it back to ext. memory ourselves:
             write_node(parent_node)
 
-        for passed_child_id in children_ids_for_left_neighbor:
-            # The child is the Leaf-Node that called us to split, so it has a running instance that wants to be updated
-            if loaded_child_node and loaded_child_node.node_id == passed_child_id:
-                loaded_child_node.parent_id = new_left_neighbor_node.node_id
-            else:
-                passed_child_node = load_node(passed_child_id)
-                passed_child_node.parent_id = new_left_neighbor_node.node_id
-                write_node(passed_child_node)
+        # If we are not a Leaf Node, update the parent-reference of all children
+        if self.is_internal_node():
+            for passed_child_id in children_ids_for_left_neighbor:
+
+
+                # The child is the Leaf-Node that called us to split, so it has a running instance that wants to be updated
+                if loaded_child_node and loaded_child_node.node_id == passed_child_id:
+                    loaded_child_node.parent_id = new_left_neighbor_node.node_id
+                else:
+                    passed_child_node = load_node(passed_child_id)
+                    passed_child_node.parent_id = new_left_neighbor_node.node_id
+                    write_node(passed_child_node)
 
     def index_for_child_id(self, find_id):
         return self.children_ids.index(find_id)
