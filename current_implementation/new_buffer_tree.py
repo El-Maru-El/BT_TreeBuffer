@@ -133,7 +133,7 @@ class TreeNode:
         write_buffer_block(self.node_id, buffer_block_id, elements)
 
     def add_elements_to_buffer(self, elements):
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
         if self.buffer_block_ids and self.last_buffer_size < tree.B:
             elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
             append_to_buffer(self.node_id, self.buffer_block_ids[-1], elements[:elements_to_add])
@@ -161,7 +161,7 @@ class TreeNode:
                     tree.leaf_node_emptying_queue.append(self.node_id)
 
     def buffer_is_full(self):
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
         if self.is_root():
             limit = (tree.m // 2) - 1
         # Following have the same max. Buffer Size, so we could summarize those later
@@ -176,7 +176,7 @@ class TreeNode:
         return BufferTree.tree_instance.root_node_id == self.node_id
 
     def clear_internal_buffer(self):
-        read_size = BufferTree.tree_instance.m // 2
+        read_size = get_tree_instance().m // 2
 
         while self.buffer_block_ids:
             elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
@@ -195,7 +195,7 @@ class TreeNode:
 
     def clear_leaf_buffer(self):
         # self node is written in callee
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
 
         num_children_before = len(self.children_ids)
 
@@ -223,7 +223,7 @@ class TreeNode:
     def insert_new_children(self, handle_child_id_tuples):
         # self node is written in callee
 
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
         for split_key, child_id in handle_child_id_tuples:
             self.handles.append(split_key)
             self.children_ids.append(child_id)
@@ -234,7 +234,7 @@ class TreeNode:
         # self node is written in callee
 
         self.split_node()
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
         while tree.split_queue:
             node_instance_to_be_split = tree.split_queue.popleft()
             node_instance_to_be_split.split_node()
@@ -242,11 +242,11 @@ class TreeNode:
 
     def split_node(self, loaded_child_node=None):
         # self node is written somewhere in callee
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
         if len(self.handles) != tree.b or len(self.children_ids) != tree.b + 1:
             raise ValueError(f"Tried splitting node {self.node_id}, but: b = {tree.b}, num handles = {len(self.handles)}, num children = {len(self.children_ids)}")
 
-        tree = BufferTree.tree_instance
+        tree = get_tree_instance()
         if self.is_root():
             # Create new root
             parent_node = TreeNode(is_internal_node=True, children=[self.node_id])
@@ -336,7 +336,7 @@ class TreeNode:
             write_leaf_block(new_leaf_id, new_leaf_block_elements)
             del new_leaf_block_elements[:]
 
-        block_size = BufferTree.tree_instance.B
+        block_size = get_tree_instance().B
 
         with open(sorted_filepath, 'r') as sorted_file_reader:
             consumed_child_counter = 0
@@ -412,7 +412,7 @@ class TreeNode:
         self.children_ids = new_leaf_ids
 
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
-        read_size = BufferTree.tree_instance.m
+        read_size = get_tree_instance().m
 
         sorted_ids = []
         while self.buffer_block_ids:
@@ -644,3 +644,7 @@ def write_leaf_block(leaf_id, elements):
     with open(leaf_file_path, 'w') as f:
         elements_in_correct_format = [f'{element}\n' for element in elements]
         f.writelines(elements_in_correct_format)
+
+
+def get_tree_instance() -> BufferTree:
+    return BufferTree.tree_instance
