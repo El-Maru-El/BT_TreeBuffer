@@ -184,6 +184,7 @@ class TestTreeNode(unittest.TestCase):
         self.assertEqual(raw_elements, reloaded_buffer_elements_only_strings)
 
     def test_merge_on_empty_root_node(self):
+        # Fills top-level buffer, that triggers insert elements into root Buffer, which is now full as well -> Empty Buffer
         tree = self.create_dummy_tree()
         root_node_id = tree.root_node_id
 
