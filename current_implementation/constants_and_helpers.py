@@ -16,6 +16,7 @@ LEAF_STRING = 'leaf_'
 SORTED_STRING = 'sorted_'
 # TODO Which file extension to use? CSV? TXT?
 FILE_EXTENSION = ''
+DUMMY_STRING = 'DUMMY'
 
 node_counter = 0
 
@@ -173,3 +174,7 @@ def append_to_sorted_buffer_elements_file(node_id, sorted_id, elements: list):
     with open(sorted_filepath, 'a') as f:
         elements_as_str = [element.to_output_string() for element in elements]
         f.writelines(elements_as_str)
+
+
+def delete_node_from_ext_memory(node_id):
+    node_dir_path = get_node_dir_path_from_id(node_id)
