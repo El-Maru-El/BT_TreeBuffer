@@ -137,11 +137,7 @@ class BufferTree:
                         # TODO Who is responsible for writing back to external? What if the nodes merge? Maybe return statement based on what we did?
                         pass
                 else:
-                    # TODO root node has too few children, handle that
-                    #  No parent or neighbor available
-                    #  -> If leaf = All fine
-                    #  -> If not leaf = Delete myself, make my only child new root
-                    pass
+                    loaded_node.root_node_is_too_small()
             else:
                 # No more steal/merges to perform, so delete another dummy child
                 leaf_node_id = self.leaf_nodes_with_dummy_children.pop_first()
@@ -595,6 +591,8 @@ class TreeNode:
 
     # Don't call this for root, root needs to be handled separately
     def steal_or_merge(self, parent_node, neighbor_node, is_left_neighbor):
+        # Parent, neighbor and self node are written in this call. Also the children that have changed parent are written
+
         tree = get_tree_instance()
         if len(self.children_ids) + 1 != self.min_amount_of_children() or len(self.handles) + 2 != self.min_amount_of_children():
             raise ValueError(f'Steal_or_merge was called on node {self.node_id}, and has too few children or split_keys!\n{len(self.children_ids)} children: {self.children_ids}\n{len(self.handles)} handles: {self.handles}')
@@ -605,20 +603,23 @@ class TreeNode:
             # Merge neighbor could have dummy children
             self.merge_with_neighbor(parent_node, neighbor_node, is_left_neighbor)
             tree.leaf_nodes_with_dummy_children.find_and_delete_element(neighbor_node.node_id)
+
+            # Delete neighbor
             delete_node_from_ext_memory(neighbor_node.node_id)
 
         else:
             # Steal neighbor can't have dummy children, we take care of that with invariant
             self.steal_from_neighbor(parent_node, neighbor_node, is_left_neighbor)
-            # TODO
-            # TODO Write neighbor here?
-            # TODO: Delete dummy children
-            # TODO: Tell neighbors ex-children that they have a new parent
-            pass
+
+            # Write neighbor
+            write_node(neighbor_node)
+
+        # If we still have DUMMY children left-over, we need another run of all of this
+        if self.children_ids[-1] == DUMMY_STRING:
+            tree.leaf_nodes_with_dummy_children.append(self.node_id)
 
         write_node(self)
         write_node(parent_node)
-        # TODO Write parent here or at top level?
 
     # Don't call this for root, root needs to be handled separately
     def merge_with_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
@@ -678,14 +679,9 @@ class TreeNode:
         if len(parent_node.children_ids) < parent_node.min_amount_of_children():
             tree.steal_or_merge_queue.append(parent_node.node_id)
 
-        # If neighbor we merged with had DUMMY children itself or we still have to many left-over, we need another run of all of this
-        if self.children_ids[-1] == DUMMY_STRING:
-            tree.leaf_nodes_with_dummy_children.append(self.node_id)
-
         # Left node will be deleted in super method anyway, no need to change the neighbor node instance
 
     def steal_from_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
-        # TODO
         tree = get_tree_instance()
         num_children_to_steal = tree.s
 
@@ -695,15 +691,114 @@ class TreeNode:
         child_index_in_parent = parent_node.index_for_child_id(self.node_id)
         split_key_index_in_parent = child_index_in_parent - 1 * is_left_neighbor
         split_key_from_parent = parent_node.handles[split_key_index_in_parent]
-        # TODO Steal not implemented yet
 
-        pass
+        # Which children and split-keys to steal, and overwrite neighbor node already
+        if is_left_neighbor:
+            stolen_split_key_to_parent = neighbor_node.handles[-num_children_to_steal]
+            stolen_split_keys_to_self = neighbor_node.handles[-num_children_to_steal + 1:]
+            stolen_children = neighbor_node.children_ids[-num_children_to_steal:]
+            neighbor_node.handles = neighbor_node.handles[:-num_children_to_steal]
+            neighbor_node.children_ids = self.children_ids[:-num_children_to_steal]
+        else:
+            stolen_split_key_to_parent = neighbor_node.handles[num_children_to_steal]
+            stolen_split_keys_to_self = neighbor_node.handles[:num_children_to_steal - 1]
+            stolen_children = neighbor_node.children_ids[:num_children_to_steal]
+            neighbor_node.handles = neighbor_node.handles[num_children_to_steal:]
+            neighbor_node.children_ids = neighbor_node.children_ids[num_children_to_steal:]
+
+        # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a + s - 1 children after merge and want at least a children in the end
+        max_amount_of_dummies_to_delete = tree.s - 1
+        self.delete_at_most_x_dummies(max_amount_of_dummies_to_delete)
+
+        # We are right sibling node and ALL our children are DUMMY -> split-key stolen from parent must be overridden to DUMMY
+        # If we are left sibling node and ALL our children DUMMY, they need to be appended at the END of the new children -> parent split key must be DUMMY as well, bc we had one more DUMMY child and than DUMMY split-key
+        if self.children_ids[0] == DUMMY_STRING:
+            split_key_from_parent = DUMMY_STRING
+
+        if not is_left_neighbor:
+            # Self is left sibling node
+            # Move all zusammengehörige DUMMY-Split-keys and children to the very end
+            self.move_dummy_to_the_back_of_lists(stolen_split_keys_to_self, stolen_children)
+            # If we still have a DUMMY child, then split-key from parent must be adapted to DUMMY as well
+            if self.children_ids[0] == DUMMY_STRING:
+                split_key_from_parent = DUMMY_STRING
+                del self.children_ids[0]
+                stolen_children.append(DUMMY_STRING)
+            self.handles = list(itertools.chain(self.handles, [split_key_from_parent], stolen_split_keys_to_self))
+            self.children_ids = list(itertools.chain(self.children_ids, stolen_children))
+        else:
+            # Self is right sibling node
+            if self.children_ids[0] == DUMMY_STRING:
+                split_key_from_parent = DUMMY_STRING
+            self.handles = list(itertools.chain(stolen_split_keys_to_self, [split_key_from_parent], self.handles))
+            self.children_ids = list(itertools.chain(stolen_children, self.children_ids))
+
+        # Adapt parent
+        parent_node.handles[split_key_index_in_parent] = stolen_split_key_to_parent
+
+        # Adapt stolen children's parent pointer:
+        if self.is_internal_node():
+            for stolen_node_id in stolen_children:
+                stolen_child_node = load_node(stolen_node_id)
+                stolen_child_node.parent_id = self.node_id
+                write_node(stolen_child_node)
+
+        # TODO When to write neighbor?
+
+    def move_dummy_to_the_back_of_lists(self, stolen_split_keys, stolen_children):
+        def validity_check():
+            if self.children_ids[-1] != self.handles[-1]:
+                raise ValueError(f"Trying to move all Dummy children and split-keys from node {self.node_id} to stolen split keys and stolen children, but split-keys and children are mismatched after {deletions} moves:"
+                                 f"Children_ids: {self.children_ids}\nSplit-keys: {self.handles}\nStolen-split-keys: {stolen_split_keys}\nStolen_children: {stolen_children}")
+
+        deletions = 0
+        while self.handles and DUMMY_STRING in [self.children_ids[-1], self.handles[-1]]:
+            validity_check()
+            del self.handles[-1]
+            del self.children_ids[-1]
+            stolen_split_keys.append(DUMMY_STRING)
+            stolen_children.append(DUMMY_STRING)
+            deletions += 1
 
     # Don't call this for root, root needs to be handled separately
     def delete_dummys_but_keep_min_children(self):
         while len(self.children_ids) > self.min_amount_of_children() and self.children_ids[-1] == DUMMY_STRING:
             del self.handles[-1]
             del self.children_ids[-1]
+
+    def delete_at_most_x_dummies(self, x):
+        def validity_check():
+            if self.children_ids[-1] != self.handles[-1]:
+                raise ValueError(f"Trying to delete {x} children from node {self.node_id}, at most {counter} deletions to go, when encountering mismatch in DUMMY pointers:\n"
+                                 f"Children_ids: {self.children_ids}\nSplit-Keys: {self.handles}")
+
+        counter = x
+
+        if x <= 0:
+            raise ValueError(f"Trying to delete {x} dummy children from node {self.node_id}, x should be > 0")
+
+        while counter and DUMMY_STRING in [self.children_ids[-1], self.handles[-1]]:
+            validity_check()
+            del self.children_ids[-1]
+            del self.handles[-1]
+            counter -= 1
+
+    def root_node_is_too_small(self):
+        # Deletes itself, meaning: From memory, tells child it does not have a parent anymore, changes root pointer in tree
+        tree = get_tree_instance()
+        if not self.is_root():
+            raise ValueError(f"Trying to delete root node {self.node_id}, but this node is not root, root should be: {tree.root_node_id}")
+        if not self.is_internal_node():
+            raise ValueError(f"Root node {self.node_id} has been marked for deletion, but is a Leaf Node. How could this happen?")
+        if len(self.children_ids) != 1:
+            raise ValueError(f"Root node {self.node_id} has been marked for deletion, but does not have exactly one child.\nChildren ids: {self.children_ids}")
+
+        loaded_child_node = load_node(self.children_ids[0])
+        loaded_child_node.parent_id = None
+        write_node(loaded_child_node)
+
+        tree.root_node_id = self.children_ids[0]
+        delete_node_from_ext_memory(self.node_id)
 
 
 class TreeBuffer:
