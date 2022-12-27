@@ -97,9 +97,6 @@ class BufferTree:
 
             node.clear_leaf_buffer()
 
-            # TODO Does anything have to be done? Don't think so not sure yet though
-            # TODO What about merges? Where will those be handled?
-
             write_node(node)
 
     def handle_leaf_nodes_with_dummy_children(self):
@@ -314,7 +311,6 @@ class TreeNode:
             parent_node = TreeNode(is_internal_node=True, children=[self.node_id])
             self.parent_id = parent_node.node_id
             tree.root_node_id = parent_node.node_id
-            self.is_intern = False
         else:
             parent_node = load_node(self.parent_id)
 
