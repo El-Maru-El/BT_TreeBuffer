@@ -139,7 +139,6 @@ class BufferTree:
                         # Neighbor already has an empty buffer, so we can execute steal or merge and decrease the queue!
                         self.steal_or_merge_queue.popleft()
                         loaded_node.steal_or_merge(parent_node, neighbor_node, is_left_neighbor)
-                        pass
                 else:
                     self.steal_or_merge_queue.popleft()
                     loaded_node.root_node_is_too_small()
@@ -587,7 +586,8 @@ class TreeNode:
         else:
             return read_leaf_block_elements_as_deque(self.children_ids[consumed_child_counter])
 
-    def delete_dummy_blocks_from_leaf_node_until_too_few_children(self): # Does not write any nodes to ext memory
+    def delete_dummy_blocks_from_leaf_node_until_too_few_children(self):
+        # Does not write any nodes to ext memory, happens in calling method
         if self.is_internal_node():
             raise ValueError("Deleting all dummy blocks node was called for a node which is not marked as a non internal node!")
         if self.children_ids[-1] != DUMMY_STRING or (self.handles and self.handles[-1] != DUMMY_STRING):
@@ -645,6 +645,8 @@ class TreeNode:
 
         # If we still have DUMMY children left-over, we need another run of all of this
         if self.children_ids[-1] == DUMMY_STRING:
+            if not len(self.children_ids) == self.min_amount_of_children():
+                raise ValueError(f"Node {self.node_id} has DUMMY children left after steal or merge, but has a different amount of children than it is supposed to\nNode data {self},\nmin amount of children: {self.min_amount_of_children()}")
             tree.leaf_nodes_with_dummy_children.append(self.node_id)
 
         write_node(self)
@@ -708,7 +710,7 @@ class TreeNode:
 
         # If parent requires splitting now, put parent into split-queue
         if len(parent_node.children_ids) < parent_node.min_amount_of_children():
-            tree.steal_or_merge_queue.append(parent_node.node_id)
+            tree.steal_or_merge_queue.appendleft(parent_node.node_id)
 
         # Neighbor node will be deleted in super method anyway, no need to change the neighbor node instance
 
@@ -741,7 +743,7 @@ class TreeNode:
             neighbor_node.handles = neighbor_node.handles[num_children_to_steal:]
             neighbor_node.children_ids = neighbor_node.children_ids[num_children_to_steal:]
 
-        # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a + s - 1 children after merge and want at least a children in the end
+        # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a - 1 + s children after merge and want at least a children in the end
         max_amount_of_dummies_to_delete = tree.s - 1
         self.delete_at_most_x_dummies(max_amount_of_dummies_to_delete)
 
@@ -779,7 +781,11 @@ class TreeNode:
                     stolen_child_node.parent_id = self.node_id
                     write_node(stolen_child_node)
 
+        # If we still have dummy children, calling method has to take care of that
+
     def move_dummy_to_the_back_of_lists(self, stolen_split_keys, stolen_children):
+        # Will remove all DUMMY children and split-keys and move them to the back of the stolen lists
+        #  It will not move self.children_ids[0] though, since there is no DUMMY split-key for that one in self node, and that needs to be handled in a special way
         def validity_check():
             if self.children_ids[-1] != self.handles[-1]:
                 raise ValueError(f"Trying to move all Dummy children and split-keys from node {self.node_id} to stolen split keys and stolen children, but split-keys and children are mismatched after {deletions} moves:"
@@ -796,7 +802,12 @@ class TreeNode:
 
     # Don't call this for root, root needs to be handled separately
     def delete_dummys_but_keep_min_children(self):
+        def validity_check():
+            if self.children_ids[-1] != self.handles[-1]:
+                raise ValueError(f"Trying to delete Dummy children in node {self} children, but children-ids and split-keys are mismatched")
+
         while len(self.children_ids) > self.min_amount_of_children() and self.children_ids[-1] == DUMMY_STRING:
+            validity_check()
             del self.handles[-1]
             del self.children_ids[-1]
 

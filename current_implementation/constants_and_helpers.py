@@ -115,14 +115,6 @@ def get_leaf_file_path_from_id(leaf_id):
     return Path(os.path.join(LEAVES_DIR, leaf_file_name_from_id(leaf_id)))
 
 
-# https://stackoverflow.com/questions/6340351/iterating-through-list-of-list-in-python
-# Returns the elements of all lists within a super-list in order
-def traverse_lists_in_list(super_list):
-    for sublist in super_list:
-        for element in sublist:
-            yield element
-
-
 def delete_all_tree_data():
     if os.path.exists(RESOURCES_DIR):
         shutil.rmtree(RESOURCES_DIR)
@@ -135,7 +127,7 @@ def delete_several_buffer_files_with_ids(node_id, buffer_block_ids):
 
 def delete_buffer_file_with_id(node_id, buffer_block_id):
     buffer_file_path = get_buffer_file_path_from_ids(node_id, buffer_block_id)
-    os.remove(buffer_file_path)
+    delete_filepath(buffer_file_path)
 
 
 def get_file_reader_for_sorted_filepath_with_ids(node_id, sorted_id):
@@ -150,13 +142,13 @@ def delete_sorted_files_with_ids(node_id, sorted_id):
 
 def delete_sorted_file_with_id(node_id, sorted_id):
     sorted_filepath = get_sorted_file_path_from_ids(node_id, sorted_id)
-    os.remove(sorted_filepath)
+    delete_filepath(sorted_filepath)
 
 
 def delete_old_leaves(leaf_ids):
     for leaf_id in leaf_ids:
         leaf_file_path = get_leaf_file_path_from_id(leaf_id)
-        os.remove(leaf_file_path)
+        delete_filepath(leaf_file_path)
 
 
 def delete_filepath(file_path):
@@ -178,3 +170,4 @@ def append_to_sorted_buffer_elements_file(node_id, sorted_id, elements: list):
 
 def delete_node_from_ext_memory(node_id):
     node_dir_path = get_node_dir_path_from_id(node_id)
+    shutil.rmtree(node_dir_path)

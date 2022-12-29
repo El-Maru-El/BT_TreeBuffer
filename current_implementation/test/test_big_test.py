@@ -47,7 +47,6 @@ class JustThrowBigTestsAtTree(unittest.TestCase):
         for element in elements:
             tree.delete_from_tree(element)
 
-        print('Done with this')
         tree.flush_all_buffers()
         root_node = load_node(tree.root_node_id)
         self.assertEqual(0, len(root_node.children_ids))
