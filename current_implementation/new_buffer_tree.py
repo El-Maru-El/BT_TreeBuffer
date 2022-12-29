@@ -603,7 +603,7 @@ class TreeNode:
         # We already know that we are a Leaf Node, otherwise this function could not be called
         tree = get_tree_instance()
 
-        while self.children_ids and self.children_id3s[-1] == DUMMY_STRING:
+        while self.children_ids and self.children_ids[-1] == DUMMY_STRING:
             # If self node is root and has only 1 child -> no split-key to be deleted
             if not (self.is_root() and len(self.children_ids) == 1):
                 del self.handles[-1]
