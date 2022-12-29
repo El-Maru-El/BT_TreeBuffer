@@ -282,7 +282,7 @@ class TreeNode:
 
         num_children_before = len(self.children_ids)
 
-        # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
+        # In case we have an empty buffer, sorted_ids will be []
         sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
         sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
         self.last_buffer_size = 0
@@ -502,6 +502,7 @@ class TreeNode:
         self.children_ids = new_leaf_ids
 
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
+        # TODO Read size should be changed here: What else is internal memory right now that takes space? Self.handles could be up to B elements. What else?
         read_size = get_tree_instance().m
 
         sorted_ids = []
@@ -570,11 +571,6 @@ class TreeNode:
         # following list will contain all indices of elements to be deleted in descending order
         if not elements:
             return
-
-        indices_to_del = deque()
-        for i in range(len(elements)-1):
-            if elements[i].element == elements[i+1].element:
-                indices_to_del.appendleft(i)
 
         new_list = []
         for i in range(len(elements)-1):
