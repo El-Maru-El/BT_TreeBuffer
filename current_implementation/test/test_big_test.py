@@ -10,11 +10,14 @@ class JustThrowBigTestsAtTree(unittest.TestCase):
 
     def test_write_and_delete_everything(self):
         # Have empty leaf node, increasing elements, insert into tree, creating 8 Leaf Blocks under root node, delete them all again
+        # Inserting and deleting (each) exactly tree.m * tree.B = M elements leads to root buffers being emptied exactly twice for each insertions and deletions -> empty tree at the end
 
         tree = self.create_dummy_tree()
         biggest_int = tree.m * tree.B
         for i in range(biggest_int):
             tree.insert_to_tree(create_string_from_int(i, biggest_int))
+
+        assert_is_proper_tree(self, tree)
 
         root_node_before_delete = load_node(tree.root_node_id)
         self.assertEqual(tree.m, len(root_node_before_delete.children_ids))
@@ -38,6 +41,8 @@ class JustThrowBigTestsAtTree(unittest.TestCase):
 
         for element in elements:
             tree.insert_to_tree(element)
+
+        assert_is_proper_tree(self, tree)
 
         for element in elements:
             tree.delete_from_tree(element)
