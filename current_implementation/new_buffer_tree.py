@@ -631,6 +631,7 @@ class TreeNode:
         if len(neighbor_node.children_ids) < tree.a + tree.t + 1:
             # Merge neighbor could have dummy children
             self.merge_with_neighbor(parent_node, neighbor_node, is_left_neighbor)
+            # Neighbor node could have been in the leaf_nodes_with_dummy_children queue -> Delete from there, if present
             tree.leaf_nodes_with_dummy_children.find_and_delete_element(neighbor_node.node_id)
 
             # Delete neighbor
