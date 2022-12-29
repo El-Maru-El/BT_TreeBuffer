@@ -1,6 +1,7 @@
 import unittest
 from current_implementation.new_buffer_tree import *
 from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.test.is_proper_tree import assert_is_proper_tree
 
 
 class JustThrowBigTestsAtTree(unittest.TestCase):
@@ -31,12 +32,22 @@ class JustThrowBigTestsAtTree(unittest.TestCase):
 
     def test_big_big_tree(self):
         tree = self.create_dummy_tree()
-        biggest_int = 50 * tree.B * tree.m
-        for i in range(biggest_int):
-            tree.insert_to_tree(create_string_from_int(i, biggest_int))
+        biggest_int = 20 * tree.B * tree.m
 
-        for i in range(biggest_int):
-            tree.delete_from_tree(create_string_from_int(i, biggest_int))
+        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+
+        for element in elements:
+            tree.insert_to_tree(element)
+
+        for element in elements:
+            tree.delete_from_tree(element)
+
+        print('Done with this')
+        tree.flush_all_buffers()
+        root_node = load_node(tree.root_node_id)
+        self.assertEqual(0, len(root_node.children_ids))
+        self.assertEqual(0, len(root_node.handles))
+        self.assertFalse(root_node.is_internal_node())
 
     @staticmethod
     def create_dummy_tree():

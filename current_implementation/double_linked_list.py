@@ -12,8 +12,16 @@ class DoublyLinkedList:
     def get_last_without_popping(self):
         return self.last.node_id
 
+    def append_if_not_present_already(self, node_id):
+        if not self.find_list_element(node_id):
+            self.append(node_id)
+
     def append(self, node_id):
         # Calling function must make sure the node_id isn't in the queue already
+        if node_id in self.map:
+            print("This shouldn't happen!!!")
+            raise ValueError("Up here.")
+
         old_last = self.last
 
         new_list_elem = ListElement(node_id, prev=self.last, following=None)
