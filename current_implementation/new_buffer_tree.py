@@ -118,7 +118,9 @@ class BufferTree:
                 some_neighbor_id = loaded_parent_node.get_right_neighbor_id_for_child_id(node.node_id)
             loaded_neighbor = load_node(some_neighbor_id)
             return loaded_parent_node, loaded_neighbor, is_left
-        # TODO
+
+        # If there are nodes with too few children -> Handle those first
+        # If there are leaf nodes with dummy children -> Delete dummy until it has too few children
         while not self.leaf_nodes_with_dummy_children.is_empty() or self.steal_or_merge_queue:
             if len(self.steal_or_merge_queue) > 1:
                 raise ValueError(f'Steal or merge queue has more than 1 element, this should not happen: queue is {self.steal_or_merge_queue}')
@@ -715,12 +717,15 @@ class TreeNode:
         # Neighbor node will be deleted in super method anyway, no need to change the neighbor node instance
 
     def steal_from_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
-        # Only writes the stolen childrens parent pointer
+        # Only writes the stolen children's parent pointer
         tree = get_tree_instance()
         num_children_to_steal = tree.s
 
         if len(neighbor_node.children_ids) < tree.a + tree.s:
             raise ValueError(f"Node {self.node_id} wants to steal {num_children_to_steal} from neighbor {neighbor_node.node_id}, but neighbor has only len{neighbor_node.children_ids} children.\nThose children are: {neighbor_node.children_ids}")
+
+        if neighbor_node.children_ids[-1] == DUMMY_STRING:
+            raise ValueError(f"Invariant for nodes with enough children to be stolen from has not been taken care of: \nNeighbor node to be stolen from: {neighbor_node}\nNode with too few children: {self}\nParent node: {parent_node}")
 
         child_index_in_parent = parent_node.index_for_child_id(self.node_id)
         split_key_index_in_parent = child_index_in_parent - 1 * is_left_neighbor
