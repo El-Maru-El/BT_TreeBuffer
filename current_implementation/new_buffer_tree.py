@@ -26,7 +26,6 @@ class BufferTree:
         self.s = BufferTree.calculate_s(self.a, self.b)
         self.t = BufferTree.calculate_t(self.a, self.b, self.s)
 
-        self.total_written_leaf_blocks = 0
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_block_ids=[])
         self.root_node_id = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
@@ -73,7 +72,6 @@ class BufferTree:
     def push_internal_buffer_to_root_return_root(self):
         root = load_node(self.root_node_id)
         root.add_block_to_buffer(self.tree_buffer.get_elements())
-        root.last_buffer_size = self.B
         write_node(root)
         self.tree_buffer.clear_elements()
 
@@ -194,6 +192,7 @@ class TreeNode:
         buffer_block_id = self.get_new_buffer_block_id()
 
         self.buffer_block_ids.append(buffer_block_id)
+        self.last_buffer_size = len(elements)
         write_buffer_block(self.node_id, buffer_block_id, elements)
 
     def add_elements_to_buffer(self, elements):
