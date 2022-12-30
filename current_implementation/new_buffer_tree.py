@@ -31,9 +31,9 @@ class BufferTree:
         self.root_node_id = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
         self.internal_node_emptying_queue = deque()
-        # TODO I believe no leaf node can be in there doubled anyways, since _all_ full Buffers get deleted before any steal/merges are performed. BUT: What about finding and deleting a neighbor node when merging with it? In that case we would still need this implementation
         self.leaf_node_emptying_queue = DoublyLinkedList()
         self.split_queue = deque()
+        # No leaf node can be in this buffer emptying queue twice at the same time, since _all_ full Buffers get deleted before any steal/merges are performed. BUT: In case of merging with a neighbor node, the neighboring node has to be deleted from this list (if present in it)
         self.leaf_nodes_with_dummy_children = DoublyLinkedList()
         self.steal_or_merge_queue = deque()
 
@@ -81,7 +81,7 @@ class BufferTree:
 
     def flush_all_buffers(self):
         root = self.push_internal_buffer_to_root_return_root()
-        root.add_self_to_buffer_emptying_queue_if_not_present_already()
+        root.add_self_to_buffer_emptying_queue()
         self.clear_all_buffers_and_rebalance(enforce_buffer_emptying_enabled=True)
 
     def clear_all_buffers_and_rebalance(self, enforce_buffer_emptying_enabled=False):
@@ -130,7 +130,7 @@ class BufferTree:
                 if not loaded_node.is_root():
                     parent_node, neighbor_node, is_left_neighbor = load_parent_neighbor_left(loaded_node)
                     if neighbor_node.has_buffer_elements():
-                        neighbor_node.add_self_to_buffer_emptying_queue_if_not_present_already()
+                        neighbor_node.add_self_to_buffer_emptying_queue()
 
                         # No need to write any nodes (we didn't change anything yet), just empty all buffers and go to next iteration
                         self.clear_all_buffers_only()
@@ -236,30 +236,37 @@ class TreeNode:
         return BufferTree.tree_instance.root_node_id == self.node_id
 
     def clear_internal_buffer(self, enforce_buffer_emptying_enabled):
+        def determine_if_all_children_are_internal_nodes():
+            first_child = load_node(self.children_ids[0])
+            return first_child.is_internal_node()
+
+        def add_children_ids_to_buffer_emptying_queue(children_ids, are_internal_nodes):
+            tree = get_tree_instance()
+            if are_internal_nodes is None:
+                are_internal_nodes = determine_if_all_children_are_internal_nodes()
+            for some_child_id in children_ids:
+                if are_internal_nodes:
+                    tree.internal_node_emptying_queue.appendleft(some_child_id)
+                else:
+                    tree.leaf_node_emptying_queue.append_to_custom_list(some_child_id)
+
         if not self.is_internal_node():
             raise ValueError(f"Tried clearing internal buffer on node {self.node_id}, but this node is a leaf node.\n:Children-Ids: {self.children_ids}\nParent-id: {self.parent_id}")
 
         read_size = get_tree_instance().m // 2
 
-        children_with_full_buffers = set()
+        children_ids_with_full_buffers = set()
+        all_children_are_internal_nodes = None
+
         while self.buffer_block_ids:
             elements = self.read_sort_and_remove_duplicates_from_buffer_files_with_read_size(read_size)
-            new_full_children = self.pass_elements_to_children(elements)
-            for new_full_child_node in new_full_children:
-                children_with_full_buffers.add(new_full_child_node)
+            new_full_children_ids, all_children_are_internal_nodes = self.pass_elements_to_children(elements)
+            children_ids_with_full_buffers.update(new_full_children_ids)
 
         if enforce_buffer_emptying_enabled:
-            tree = get_tree_instance()
-            first_child = load_node(self.children_ids[0])
-            all_children_are_internal_nodes = first_child.is_internal_node()
-            for child_id in self.children_ids:
-                if all_children_are_internal_nodes:
-                    tree.internal_node_emptying_queue.appendleft(child_id)
-                else:
-                    tree.leaf_node_emptying_queue.append_to_custom_list(child_id)
+            add_children_ids_to_buffer_emptying_queue(self.children_ids, all_children_are_internal_nodes)
         else:
-            for child_node in children_with_full_buffers:
-                child_node.add_self_to_buffer_emptying_queue_if_not_present_already()
+            add_children_ids_to_buffer_emptying_queue(children_ids_with_full_buffers, all_children_are_internal_nodes)
 
         self.last_buffer_size = 0
 
@@ -515,12 +522,16 @@ class TreeNode:
         return sorted_ids
 
     def pass_elements_to_children(self, elements):
+        # Returns the set of ids of those children nodes, where the buffer is full now
+        # Also returns a bool, indicating where the children are internal nodes. If no elements were passed (and therefore no children loaded to check), returns None in its place
         if not elements:
-            return []
+            return set(), None
         elements = deque(elements)
 
         child_index = 0
         output_to_child = []
+
+        children_are_internal_nodes = None
 
         children_with_full_buffers = set()
         while child_index < len(self.handles):
@@ -530,9 +541,10 @@ class TreeNode:
             if output_to_child:
                 child_node_id = self.children_ids[child_index]
                 child_node = load_node(child_node_id)
+                children_are_internal_nodes = child_node.is_internal_node()
                 child_buffer_is_full = child_node.add_elements_to_buffer(output_to_child)
                 if child_buffer_is_full:
-                    children_with_full_buffers.add(child_node)
+                    children_with_full_buffers.add(child_node.node_id)
                 write_node(child_node)
 
             output_to_child = []
@@ -543,12 +555,13 @@ class TreeNode:
         if output_to_child:
             child_node_id = self.children_ids[-1]
             child_node = load_node(child_node_id)
+            children_are_internal_nodes = child_node.is_internal_node()
             child_buffer_is_full = child_node.add_elements_to_buffer(output_to_child)
             if child_buffer_is_full:
-                children_with_full_buffers.add(child_node)
+                children_with_full_buffers.add(child_node.node_id)
             write_node(child_node)
 
-        return children_with_full_buffers
+        return children_with_full_buffers, children_are_internal_nodes
 
     def get_left_neighbor_id_for_child_id(self, child_id):
         child_index = self.children_ids.index(child_id)
@@ -847,12 +860,13 @@ class TreeNode:
         tree.root_node_id = self.children_ids[0]
         delete_node_from_ext_memory(self.node_id)
 
-    def add_self_to_buffer_emptying_queue_if_not_present_already(self):
+    def add_self_to_buffer_emptying_queue(self):
+        # This function assumes that the node is not in the leaf queue already
         tree = get_tree_instance()
         if self.is_internal_node():
             tree.internal_node_emptying_queue.appendleft(self.node_id)
         else:
-            tree.leaf_node_emptying_queue.append_if_not_present_already(self.node_id)
+            tree.leaf_node_emptying_queue.append_to_custom_list(self.node_id)
 
 
 class TreeBuffer:

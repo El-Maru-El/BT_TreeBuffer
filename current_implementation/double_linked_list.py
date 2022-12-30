@@ -6,21 +6,26 @@ class DoublyLinkedList:
         self.num_elements = 0
         self.map = {}
 
+    # Only for debugging:
+    def __str__(self):
+        if not self.num_elements:
+            return f"Doubly Linked List with no elements. Self.first: {self.first}. Self.map: {self.map}"
+
+        output_str = self.first.node_id
+        current_list_element = self.first.following
+        while current_list_element:
+            output_str += f", {current_list_element.node_id}"
+            current_list_element = current_list_element.following
+
+        return output_str
+
     def is_empty(self):
         return self.num_elements == 0
 
-    def get_last_without_popping(self):
-        return self.last.node_id
-
-    def append_if_not_present_already(self, node_id):
-        if not self.find_list_element(node_id):
-            self.append_to_custom_list(node_id)
-
     def append_to_custom_list(self, node_id):
-        # Calling function must make sure the node_id isn't in the queue already
+        # Calling function must make sure the node_id isn't in the queue already (if it already is in there, a mistake has been made)
         if node_id in self.map:
-            print("This shouldn't happen!!!")
-            raise ValueError("Up here.")
+            raise ValueError(f"Node {node_id} was already in this queue. Queue contains: {self}")
 
         old_last = self.last
 
@@ -77,3 +82,10 @@ class ListElement:
         self.node_id = node_id
         self.prev = prev
         self.following = following
+
+    # Only for debugging
+    def __str__(self):
+        return f"Node_id: {self.node_id}, previous: {self.prev}, following: {self.following}"
+
+    def __repr__(self):
+        return f"Node_id: {self.node_id}, previous: {self.prev}, following: {self.following}"
