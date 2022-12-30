@@ -31,7 +31,7 @@ class BufferTree:
         self.root_node_id = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
         self.internal_node_emptying_queue = deque()
-        # TODO I believe no leaf node can be in there doubled anyways, since _all_ full Buffers get deleted before any steal/merges are performed
+        # TODO I believe no leaf node can be in there doubled anyways, since _all_ full Buffers get deleted before any steal/merges are performed. BUT: What about finding and deleting a neighbor node when merging with it? In that case we would still need this implementation
         self.leaf_node_emptying_queue = DoublyLinkedList()
         self.split_queue = deque()
         self.leaf_nodes_with_dummy_children = DoublyLinkedList()
