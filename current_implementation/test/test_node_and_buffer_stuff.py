@@ -1,54 +1,50 @@
 from current_implementation.new_buffer_tree import *
+from current_implementation.create_comparable_string import create_string_from_int
 import unittest
 
 
-class TestBasicStructure(unittest.TestCase):
+class TestTreeBuffer(unittest.TestCase):
 
     def setUp(self):
         clean_up_and_initialize_resource_directories()
 
-    # def tearDown(self):
-    #     delete_all_nodes()
-
-    def test_basic_node_stuff(self):
-        new_node = TreeNode(is_internal_node=False)
-        write_node(new_node)
-        reloaded_node = load_node(new_node.node_id)
-
-        self.assertEqual(new_node.__dict__, reloaded_node.__dict__)
-
-    def test_actual_node_stuff(self):
-        new_node = TreeNode(is_internal_node=True, handles=['abc', 'def'], children=[get_new_node_id(), get_new_node_id(), get_new_node_id()])
-        node_id = new_node.node_id
-        write_node(new_node)
-        reloaded_node = load_node(node_id)
-
-        self.assertEqual(new_node.__dict__, reloaded_node.__dict__)
-
-    def test_basic_buffer(self):
-        fake_node = TreeNode(is_internal_node=False)
-        elements = [BufferElement(str(i), Action.INSERT) for i in range(10)]
-        buffer_block_id = fake_node.get_new_buffer_block_id()
-        write_buffer_block(fake_node.node_id, buffer_block_id, elements)
-        reloaded_elements = read_buffer_block_elements(fake_node.node_id, buffer_block_id)
-        self.assertEqual(elements, reloaded_elements)
-
-    def test_tree_buffer_one_block(self):
+    def test_perfectly_filled_tree_buffer_one_block(self):
         tree = self.create_dummy_tree()
 
-        elements_to_add = [f'Element_{i}' for i in range(int(1.5 * tree.B))]
+        biggest_int = tree.B
+        elements_to_add = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
         for element in elements_to_add:
             tree.insert_to_tree(element)
 
         root_node = load_node(tree.root_node_id)
         self.assertEqual(len(root_node.buffer_block_ids), 1)
 
-        buffer_elements = read_buffer_block_elements(tree.root_node_id, root_node.buffer_block_ids[0])
-        buffer_elements_just_keys = [ele.element for ele in buffer_elements]
+        node_buffer_elements = read_buffer_block_elements(tree.root_node_id, root_node.buffer_block_ids[0])
+        node_buffer_elements_just_keys = [ele.element for ele in node_buffer_elements]
 
-        self.assertEqual(buffer_elements_just_keys, elements_to_add[:tree.B])
+        self.assertEqual(node_buffer_elements_just_keys, elements_to_add)
+        self.assertEqual([], tree.tree_buffer.elements)
 
-    def test_tree_buffer_two_blocks(self):
+    def test_overfilled_tree_buffer_one_block(self):
+        tree = self.create_dummy_tree()
+
+        biggest_int = int(1.5 * tree.B)
+        elements_to_add = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        for element in elements_to_add:
+            tree.insert_to_tree(element)
+
+        root_node = load_node(tree.root_node_id)
+        self.assertEqual(len(root_node.buffer_block_ids), 1)
+
+        node_buffer_elements = read_buffer_block_elements(tree.root_node_id, root_node.buffer_block_ids[0])
+        node_buffer_elements_just_keys = [ele.element for ele in node_buffer_elements]
+
+        tree_buffer_elements_just_keys = [ele.element for ele in tree.tree_buffer.elements]
+
+        self.assertEqual(node_buffer_elements_just_keys, elements_to_add[:tree.B])
+        self.assertEqual(tree_buffer_elements_just_keys, elements_to_add[tree.B:])
+
+    def test_perfectly_filled_tree_buffer_two_blocks(self):
         tree = self.create_dummy_tree()
 
         elements_to_add = [f'Element_{i}' for i in range(int(2 * tree.B))]
@@ -65,122 +61,9 @@ class TestBasicStructure(unittest.TestCase):
 
         self.assertEqual(buffer_one_just_keys, elements_to_add[:tree.B])
         self.assertEqual(buffer_two_just_keys, elements_to_add[tree.B:2*tree.B])
+        self.assertEqual([], tree.tree_buffer.elements)
 
-    def test_add_elements_to_empty_buffer(self):
-        tree = self.create_dummy_tree()
 
-        fake_node = TreeNode(is_internal_node=False)
-        node_id = fake_node.node_id
-
-        starting_elements = [BufferElement(f'Element_{i}', Action.INSERT) for i in range(tree.B // 3)]
-
-        fake_node.add_elements_to_buffer(elements=starting_elements)
-
-        self.assertEqual(len(fake_node.buffer_block_ids), 1)
-
-        reloaded_buffer_elements = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
-        self.assertEqual(reloaded_buffer_elements, starting_elements)
-
-    def test_add_elements_to_partially_filled_bufferblock(self):
-        tree = self.create_dummy_tree()
-        B = tree.B
-
-        fake_node = TreeNode(is_internal_node=False)
-        node_id = fake_node.node_id
-
-        starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B // 2)]
-        fake_node.add_elements_to_buffer(elements=starting_elements)
-
-        appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
-        fake_node.add_elements_to_buffer(elements=appending_elements)
-
-        self.assertEqual(len(fake_node.buffer_block_ids), 2)
-
-        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
-        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[1])
-
-        self.assertNotEqual(fake_node.buffer_block_ids[0], fake_node.buffer_block_ids[1], 'Same buffer timestamps....')
-        self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:B // 2])
-        self.assertEqual(reloaded_buffer_two, appending_elements[B // 2:])
-        self.assertEqual(fake_node.last_buffer_size, B // 2)
-
-    def test_add_elements_to_full_bufferblock(self):
-        tree = self.create_dummy_tree()
-        B = tree.B
-
-        fake_node = TreeNode(is_internal_node=False)
-        node_id = fake_node.node_id
-
-        starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B)]
-        fake_node.add_elements_to_buffer(elements=starting_elements)
-
-        appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(B)]
-        fake_node.add_elements_to_buffer(elements=appending_elements)
-
-        self.assertEqual(len(fake_node.buffer_block_ids), 2)
-        self.assertEqual(fake_node.last_buffer_size, B)
-        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
-        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[1])
-
-        self.assertEqual(reloaded_buffer_one, starting_elements)
-        self.assertEqual(reloaded_buffer_two, appending_elements)
-
-    def test_fill_buffer_block_perfectly(self):
-        tree = self.create_dummy_tree()
-        B = tree.B
-
-        fake_node = TreeNode(is_internal_node=False)
-        node_id = fake_node.node_id
-
-        starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B-1)]
-        fake_node.add_elements_to_buffer(elements=starting_elements)
-
-        last_element = BufferElement(f'Ending_Element', Action.INSERT)
-        fake_node.add_elements_to_buffer(elements=[last_element])
-
-        self.assertEqual(len(fake_node.buffer_block_ids), 1)
-
-        reloaded_buffer_elements = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
-        self.assertEqual(reloaded_buffer_elements, starting_elements + [last_element])
-
-    def test_dont_overfill_bufferblock(self):
-        tree = self.create_dummy_tree()
-        B = tree.B
-
-        fake_node = TreeNode(is_internal_node=False)
-        node_id = fake_node.node_id
-
-        starting_elements = [BufferElement(f'Start_{i}', Action.INSERT) for i in range(B-1)]
-        fake_node.add_elements_to_buffer(elements=starting_elements)
-
-        appending_elements = [BufferElement(f'Append_{i}', Action.INSERT) for i in range(2)]
-        fake_node.add_elements_to_buffer(elements=appending_elements)
-
-        self.assertEqual(len(fake_node.buffer_block_ids), 2)
-
-        reloaded_buffer_one = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[0])
-        reloaded_buffer_two = read_buffer_block_elements(node_id, fake_node.buffer_block_ids[1])
-
-        failed_one = None
-        if fake_node.buffer_block_ids[0] == fake_node.buffer_block_ids[1]:
-            failed_one = 'Failed bc the same timestamp was used for both buffer files'
-        self.assertEqual(reloaded_buffer_one, starting_elements + appending_elements[:1], failed_one)
-        self.assertEqual(reloaded_buffer_two, appending_elements[1:])
-
-    def test_buffer_timestamps(self):
-        buffer_elements = [BufferElement('SomeElement', Action.INSERT) for _ in range(100000)]
-        for i in range(len(buffer_elements)-1):
-            self.assertLess(buffer_elements[i].timestamp, buffer_elements[i+1].timestamp, 'Buffer timestamps are not smaller than each other')
-
-    def test_reloading_buffer_element(self):
-        tree = self.create_dummy_tree()
-        B = tree.B
-        node_id = tree.root_node_id
-        buffer_block_id = 'some_block_id'
-        original_buffer_elements = [BufferElement('SomeElement', Action.INSERT) for _ in range(100000)]
-        write_buffer_block(node_id, buffer_block_id, original_buffer_elements)
-        reloaded_elements = read_buffer_block_elements(node_id, buffer_block_id)
-        self.assertEqual(original_buffer_elements, reloaded_elements)
 
     @staticmethod
     def create_dummy_tree():

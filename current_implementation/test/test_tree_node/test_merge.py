@@ -29,7 +29,7 @@ class TestTreeNodeSplit(unittest.TestCase):
         self.assertEqual([], root_node.handles)
         self.assertEqual([current_node.node_id], root_node.children_ids)
 
-        self.assertEqual(deque([root_node.node_id]), tree.steal_or_merge_queue)
+        self.assertEqual(deque([root_node.node_id]), tree.node_to_steal_or_merge_queue)
 
     def test_standard_merge_is_right(self):
         tree = self.create_dummy_tree()
@@ -52,7 +52,7 @@ class TestTreeNodeSplit(unittest.TestCase):
         self.assertEqual([], root_node.handles)
         self.assertEqual([current_node.node_id], root_node.children_ids)
 
-        self.assertEqual(deque([root_node.node_id]), tree.steal_or_merge_queue)
+        self.assertEqual(deque([root_node.node_id]), tree.node_to_steal_or_merge_queue)
 
 
 

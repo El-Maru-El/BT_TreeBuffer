@@ -32,6 +32,7 @@ class BufferFlushTest(unittest.TestCase):
         reloaded_root_node = load_node(tree.root_node_id)
         self.assertEqual(0, len(reloaded_root_node.children_ids))
 
+# TODO More tests for flushing buffer would be good (bigger tree structure)
 
     @staticmethod
     def create_dummy_tree():
