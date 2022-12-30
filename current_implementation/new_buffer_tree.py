@@ -30,12 +30,12 @@ class BufferTree:
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_block_ids=[])
         self.root_node_id = root_node.node_id
         self.tree_buffer = TreeBuffer(max_size=self.B)
-        self.internal_node_emptying_queue = deque()
-        self.leaf_node_emptying_queue = DoublyLinkedList()
-        self.split_queue = deque()
+        self.internal_node_buffer_emptying_queue = deque()
+        self.leaf_node_buffer_emptying_queue = DoublyLinkedList()
+        self.node_to_split_queue = deque()
         # No leaf node can be in this buffer emptying queue twice at the same time, since _all_ full Buffers get deleted before any steal/merges are performed. BUT: In case of merging with a neighbor node, the neighboring node has to be deleted from this list (if present in it)
         self.leaf_nodes_with_dummy_children = DoublyLinkedList()
-        self.steal_or_merge_queue = deque()
+        self.node_to_steal_or_merge_queue = deque()
 
         BufferTree.tree_instance = self
         write_node(root_node)
@@ -65,9 +65,9 @@ class BufferTree:
             if root.buffer_is_full():
                 # At this point the queues should still be empty, so no checks to whether root is already present are necessary
                 if root.is_internal_node():
-                    self.internal_node_emptying_queue.append(root.node_id)
+                    self.internal_node_buffer_emptying_queue.append(root.node_id)
                 else:
-                    self.leaf_node_emptying_queue.append_to_custom_list(root.node_id)
+                    self.leaf_node_buffer_emptying_queue.append_to_custom_list(root.node_id)
                 self.clear_all_buffers_and_rebalance()
 
     def push_internal_buffer_to_root_return_root(self):
@@ -93,15 +93,15 @@ class BufferTree:
         self.clear_full_leaf_buffers()
 
     def clear_full_internal_buffers(self, enforce_buffer_emptying_enabled):
-        while self.internal_node_emptying_queue:
-            node_id = self.internal_node_emptying_queue.popleft()
+        while self.internal_node_buffer_emptying_queue:
+            node_id = self.internal_node_buffer_emptying_queue.popleft()
             node = load_node(node_id)
             node.clear_internal_buffer(enforce_buffer_emptying_enabled)
             write_node(node)
 
     def clear_full_leaf_buffers(self):
-        while not self.leaf_node_emptying_queue.is_empty():
-            node_id = self.leaf_node_emptying_queue.pop_first()
+        while not self.leaf_node_buffer_emptying_queue.is_empty():
+            node_id = self.leaf_node_buffer_emptying_queue.pop_first()
             node = load_node(node_id)
 
             node.clear_leaf_buffer()
@@ -121,11 +121,11 @@ class BufferTree:
 
         # If there are nodes with too few children -> Handle those first
         # If there are leaf nodes with dummy children -> Delete dummy until it has too few children
-        while not self.leaf_nodes_with_dummy_children.is_empty() or self.steal_or_merge_queue:
-            if len(self.steal_or_merge_queue) > 1:
-                raise ValueError(f'Steal or merge queue has more than 1 element, this should not happen: queue is {self.steal_or_merge_queue}')
-            if self.steal_or_merge_queue:
-                node_id = self.steal_or_merge_queue[0]
+        while not self.leaf_nodes_with_dummy_children.is_empty() or self.node_to_steal_or_merge_queue:
+            if len(self.node_to_steal_or_merge_queue) > 1:
+                raise ValueError(f'Steal or merge queue has more than 1 element, this should not happen: queue is {self.node_to_steal_or_merge_queue}')
+            if self.node_to_steal_or_merge_queue:
+                node_id = self.node_to_steal_or_merge_queue[0]
                 loaded_node = load_node(node_id)
                 if not loaded_node.is_root():
                     parent_node, neighbor_node, is_left_neighbor = load_parent_neighbor_left(loaded_node)
@@ -137,10 +137,10 @@ class BufferTree:
                         continue
                     else:
                         # Neighbor already has an empty buffer, so we can execute steal or merge and decrease the queue!
-                        self.steal_or_merge_queue.popleft()
+                        self.node_to_steal_or_merge_queue.popleft()
                         loaded_node.steal_or_merge(parent_node, neighbor_node, is_left_neighbor)
                 else:
-                    self.steal_or_merge_queue.popleft()
+                    self.node_to_steal_or_merge_queue.popleft()
                     loaded_node.root_node_is_too_small()
             else:
                 # No more steal/merges to perform, so delete another dummy child
@@ -246,9 +246,9 @@ class TreeNode:
                 are_internal_nodes = determine_if_all_children_are_internal_nodes()
             for some_child_id in children_ids:
                 if are_internal_nodes:
-                    tree.internal_node_emptying_queue.appendleft(some_child_id)
+                    tree.internal_node_buffer_emptying_queue.appendleft(some_child_id)
                 else:
-                    tree.leaf_node_emptying_queue.append_to_custom_list(some_child_id)
+                    tree.leaf_node_buffer_emptying_queue.append_to_custom_list(some_child_id)
 
         if not self.is_internal_node():
             raise ValueError(f"Tried clearing internal buffer on node {self.node_id}, but this node is a leaf node.\n:Children-Ids: {self.children_ids}\nParent-id: {self.parent_id}")
@@ -334,8 +334,8 @@ class TreeNode:
 
         self.split_node()
         tree = get_tree_instance()
-        while tree.split_queue:
-            node_instance_to_be_split = tree.split_queue.popleft()
+        while tree.node_to_split_queue:
+            node_instance_to_be_split = tree.node_to_split_queue.popleft()
             node_instance_to_be_split.split_node()
             write_node(node_instance_to_be_split)
 
@@ -385,7 +385,7 @@ class TreeNode:
             if not self.is_internal_node():
                 parent_node.split_node(loaded_child_node=self)
             else:
-                tree.split_queue.append(parent_node)
+                tree.node_to_split_queue.append(parent_node)
         else:
             # Parent didn't split, so we write it back to ext. memory ourselves:
             write_node(parent_node)
@@ -619,7 +619,7 @@ class TreeNode:
 
             # if we have too few children -> Node has to steal/merge -> Add to queue (Only one element ever is in queue at the same time)
             if len(self.children_ids) < self.min_amount_of_children():
-                tree.steal_or_merge_queue.append(self.node_id)
+                tree.node_to_steal_or_merge_queue.append(self.node_id)
                 return
 
     def min_amount_of_children(self):
@@ -725,7 +725,7 @@ class TreeNode:
 
         # If parent requires splitting now, put parent into split-queue
         if len(parent_node.children_ids) < parent_node.min_amount_of_children():
-            tree.steal_or_merge_queue.appendleft(parent_node.node_id)
+            tree.node_to_steal_or_merge_queue.appendleft(parent_node.node_id)
 
         # Neighbor node will be deleted in super method anyway, no need to change the neighbor node instance
 
@@ -864,9 +864,9 @@ class TreeNode:
         # This function assumes that the node is not in the leaf queue already
         tree = get_tree_instance()
         if self.is_internal_node():
-            tree.internal_node_emptying_queue.appendleft(self.node_id)
+            tree.internal_node_buffer_emptying_queue.appendleft(self.node_id)
         else:
-            tree.leaf_node_emptying_queue.append_to_custom_list(self.node_id)
+            tree.leaf_node_buffer_emptying_queue.append_to_custom_list(self.node_id)
 
 
 class TreeBuffer:
