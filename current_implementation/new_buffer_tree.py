@@ -118,7 +118,9 @@ class BufferTree:
                 some_neighbor_id = loaded_parent_node.get_right_neighbor_id_for_child_id(node.node_id)
             loaded_neighbor = load_node(some_neighbor_id)
             return loaded_parent_node, loaded_neighbor, is_left
-        # TODO
+
+        # If there are nodes with too few children -> Handle those first
+        # If there are leaf nodes with dummy children -> Delete dummy until it has too few children
         while not self.leaf_nodes_with_dummy_children.is_empty() or self.steal_or_merge_queue:
             if len(self.steal_or_merge_queue) > 1:
                 raise ValueError(f'Steal or merge queue has more than 1 element, this should not happen: queue is {self.steal_or_merge_queue}')
@@ -129,10 +131,6 @@ class BufferTree:
                     parent_node, neighbor_node, is_left_neighbor = load_parent_neighbor_left(loaded_node)
                     if neighbor_node.has_buffer_elements():
                         neighbor_node.add_self_to_buffer_emptying_queue_if_not_present_already()
-                        # if neighbor_node.is_internal_node():
-                        #     self.internal_node_emptying_queue.append(neighbor_node.node_id)
-                        # else:
-                        #     self.leaf_node_emptying_queue.append(neighbor_node.node_id)
 
                         # No need to write any nodes (we didn't change anything yet), just empty all buffers and go to next iteration
                         self.clear_all_buffers_only()
@@ -141,8 +139,6 @@ class BufferTree:
                         # Neighbor already has an empty buffer, so we can execute steal or merge and decrease the queue!
                         self.steal_or_merge_queue.popleft()
                         loaded_node.steal_or_merge(parent_node, neighbor_node, is_left_neighbor)
-                        # TODO Who is responsible for writing back to external? What if the nodes merge? Maybe return statement based on what we did?
-                        pass
                 else:
                     self.steal_or_merge_queue.popleft()
                     loaded_node.root_node_is_too_small()
@@ -285,7 +281,7 @@ class TreeNode:
 
         num_children_before = len(self.children_ids)
 
-        # TODO Do we need to check whether there even are any buffer files? Could we be empty before?
+        # In case we have an empty buffer, sorted_ids will be []
         sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
         sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
         self.last_buffer_size = 0
@@ -505,6 +501,7 @@ class TreeNode:
         self.children_ids = new_leaf_ids
 
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
+        # TODO Read size should be changed here: What else is internal memory right now that takes space? Self.handles could be up to B elements. What else?
         read_size = get_tree_instance().m
 
         sorted_ids = []
@@ -574,11 +571,6 @@ class TreeNode:
         if not elements:
             return
 
-        indices_to_del = deque()
-        for i in range(len(elements)-1):
-            if elements[i].element == elements[i+1].element:
-                indices_to_del.appendleft(i)
-
         new_list = []
         for i in range(len(elements)-1):
             if elements[i].element != elements[i + 1].element:
@@ -594,7 +586,8 @@ class TreeNode:
         else:
             return read_leaf_block_elements_as_deque(self.children_ids[consumed_child_counter])
 
-    def delete_dummy_blocks_from_leaf_node_until_too_few_children(self): # Does not write any nodes to ext memory
+    def delete_dummy_blocks_from_leaf_node_until_too_few_children(self):
+        # Does not write any nodes to ext memory, happens in calling method
         if self.is_internal_node():
             raise ValueError("Deleting all dummy blocks node was called for a node which is not marked as a non internal node!")
         if self.children_ids[-1] != DUMMY_STRING or (self.handles and self.handles[-1] != DUMMY_STRING):
@@ -635,11 +628,10 @@ class TreeNode:
         if len(self.children_ids) + 1 != self.min_amount_of_children() or len(self.handles) + 2 != self.min_amount_of_children():
             raise ValueError(f'Steal_or_merge was called on node {self.node_id}, and has too few children or split_keys!\n{len(self.children_ids)} children: {self.children_ids}\n{len(self.handles)} handles: {self.handles}')
 
-        # TODO When to write parent and neighbor again?
-
         if len(neighbor_node.children_ids) < tree.a + tree.t + 1:
             # Merge neighbor could have dummy children
             self.merge_with_neighbor(parent_node, neighbor_node, is_left_neighbor)
+            # Neighbor node could have been in the leaf_nodes_with_dummy_children queue -> Delete from there, if present
             tree.leaf_nodes_with_dummy_children.find_and_delete_element(neighbor_node.node_id)
 
             # Delete neighbor
@@ -654,6 +646,8 @@ class TreeNode:
 
         # If we still have DUMMY children left-over, we need another run of all of this
         if self.children_ids[-1] == DUMMY_STRING:
+            if not len(self.children_ids) == self.min_amount_of_children():
+                raise ValueError(f"Node {self.node_id} has DUMMY children left after steal or merge, but has a different amount of children than it is supposed to\nNode data {self},\nmin amount of children: {self.min_amount_of_children()}")
             tree.leaf_nodes_with_dummy_children.append(self.node_id)
 
         write_node(self)
@@ -661,13 +655,15 @@ class TreeNode:
 
     # Don't call this for root, root needs to be handled separately
     def merge_with_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
+        # Our invariant makes sure there aren't any DUMMY children in neighbor node
+        # Only writes childrens new parent pointer
+
         tree = get_tree_instance()
-        # TODO
         child_index_in_parent = parent_node.index_for_child_id(self.node_id)
         split_key_index_in_parent = child_index_in_parent - 1 * is_left_neighbor
         split_key_from_parent = parent_node.handles[split_key_index_in_parent]
 
-        # Overwrite the parent-pointer of all the children to be stolen:
+        # Overwrite the parent-pointer of all the children to be stolen (invariant makes sure there are no DUMMY children)
         if neighbor_node.is_internal_node():
             for child_id in neighbor_node.children_ids:
                 stolen_child = load_node(child_id)
@@ -681,7 +677,7 @@ class TreeNode:
             left_node = self
             right_node = neighbor_node
 
-        # If left node has dummy children, take them away and give them to right child
+        # If left node has dummy children, take them away and append them to right child
         while left_node.handles and left_node.handles[-1] == DUMMY_STRING:
             del left_node.handles[-1]
             del left_node.children_ids[-1]
@@ -715,16 +711,20 @@ class TreeNode:
 
         # If parent requires splitting now, put parent into split-queue
         if len(parent_node.children_ids) < parent_node.min_amount_of_children():
-            tree.steal_or_merge_queue.append(parent_node.node_id)
+            tree.steal_or_merge_queue.appendleft(parent_node.node_id)
 
-        # Left node will be deleted in super method anyway, no need to change the neighbor node instance
+        # Neighbor node will be deleted in super method anyway, no need to change the neighbor node instance
 
     def steal_from_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
+        # Only writes the stolen children's parent pointer
         tree = get_tree_instance()
         num_children_to_steal = tree.s
 
         if len(neighbor_node.children_ids) < tree.a + tree.s:
             raise ValueError(f"Node {self.node_id} wants to steal {num_children_to_steal} from neighbor {neighbor_node.node_id}, but neighbor has only len{neighbor_node.children_ids} children.\nThose children are: {neighbor_node.children_ids}")
+
+        if neighbor_node.children_ids[-1] == DUMMY_STRING:
+            raise ValueError(f"Invariant for nodes with enough children to be stolen from has not been taken care of: \nNeighbor node to be stolen from: {neighbor_node}\nNode with too few children: {self}\nParent node: {parent_node}")
 
         child_index_in_parent = parent_node.index_for_child_id(self.node_id)
         split_key_index_in_parent = child_index_in_parent - 1 * is_left_neighbor
@@ -744,7 +744,7 @@ class TreeNode:
             neighbor_node.handles = neighbor_node.handles[num_children_to_steal:]
             neighbor_node.children_ids = neighbor_node.children_ids[num_children_to_steal:]
 
-        # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a + s - 1 children after merge and want at least a children in the end
+        # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a - 1 + s children after merge and want at least a children in the end
         max_amount_of_dummies_to_delete = tree.s - 1
         self.delete_at_most_x_dummies(max_amount_of_dummies_to_delete)
 
@@ -774,16 +774,19 @@ class TreeNode:
         # Adapt parent
         parent_node.handles[split_key_index_in_parent] = stolen_split_key_to_parent
 
-        # Adapt stolen children's parent pointer:
+        # Adapt stolen children's parent pointer (and make sure we're not trying to overwrite DUMMY childrens parent pointer)
         if self.is_internal_node():
             for stolen_node_id in stolen_children:
-                stolen_child_node = load_node(stolen_node_id)
-                stolen_child_node.parent_id = self.node_id
-                write_node(stolen_child_node)
+                if stolen_node_id != DUMMY_STRING:
+                    stolen_child_node = load_node(stolen_node_id)
+                    stolen_child_node.parent_id = self.node_id
+                    write_node(stolen_child_node)
 
-        # TODO When to write neighbor?
+        # If we still have dummy children, calling method has to take care of that
 
     def move_dummy_to_the_back_of_lists(self, stolen_split_keys, stolen_children):
+        # Will remove all DUMMY children and split-keys and move them to the back of the stolen lists
+        #  It will not move self.children_ids[0] though, since there is no DUMMY split-key for that one in self node, and that needs to be handled in a special way
         def validity_check():
             if self.children_ids[-1] != self.handles[-1]:
                 raise ValueError(f"Trying to move all Dummy children and split-keys from node {self.node_id} to stolen split keys and stolen children, but split-keys and children are mismatched after {deletions} moves:"
@@ -800,7 +803,12 @@ class TreeNode:
 
     # Don't call this for root, root needs to be handled separately
     def delete_dummys_but_keep_min_children(self):
+        def validity_check():
+            if self.children_ids[-1] != self.handles[-1]:
+                raise ValueError(f"Trying to delete Dummy children in node {self} children, but children-ids and split-keys are mismatched")
+
         while len(self.children_ids) > self.min_amount_of_children() and self.children_ids[-1] == DUMMY_STRING:
+            validity_check()
             del self.handles[-1]
             del self.children_ids[-1]
 
