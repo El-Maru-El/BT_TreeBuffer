@@ -14,9 +14,9 @@ class DoublyLinkedList:
 
     def append_if_not_present_already(self, node_id):
         if not self.find_list_element(node_id):
-            self.append(node_id)
+            self.append_to_custom_list(node_id)
 
-    def append(self, node_id):
+    def append_to_custom_list(self, node_id):
         # Calling function must make sure the node_id isn't in the queue already
         if node_id in self.map:
             print("This shouldn't happen!!!")

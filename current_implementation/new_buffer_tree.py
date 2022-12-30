@@ -67,7 +67,7 @@ class BufferTree:
                 if root.is_internal_node():
                     self.internal_node_emptying_queue.append(root.node_id)
                 else:
-                    self.leaf_node_emptying_queue.append(root.node_id)
+                    self.leaf_node_emptying_queue.append_to_custom_list(root.node_id)
                 self.clear_all_buffers_and_rebalance()
 
     def push_internal_buffer_to_root_return_root(self):
@@ -256,7 +256,7 @@ class TreeNode:
                 if all_children_are_internal_nodes:
                     tree.internal_node_emptying_queue.appendleft(child_id)
                 else:
-                    tree.leaf_node_emptying_queue.append_if_not_present_already(child_id)
+                    tree.leaf_node_emptying_queue.append_to_custom_list(child_id)
         else:
             for child_node in children_with_full_buffers:
                 child_node.add_self_to_buffer_emptying_queue_if_not_present_already()
@@ -295,12 +295,13 @@ class TreeNode:
         elif len(self.children_ids) < num_children_before:
             if len(self.children_ids) < self.min_amount_of_children():
                 self.create_dummy_children()
-                tree.leaf_nodes_with_dummy_children.append(self.node_id)
-            else:
-                # We should be good otherwise? We don't have to re-balance since we still have >= a children
-                pass
+                tree.leaf_nodes_with_dummy_children.append_to_custom_list(self.node_id)
+
+            # Else: We should be good otherwise, we don't have to re-balance since we still have a(or 0 if root) <= num_children <= b
 
     def create_dummy_children(self):
+        if len(self.handles) + 1 != len(self.children_ids) and not len(self.children_ids) == 0:
+            raise ValueError(f"Trying to append dummy elements to node {self.node_id}, but amount of split-keys + 1 != amount of children, even though there is more than zero children \nNode data: {self}")
         # Self node has less than a children, so create dummy children ids and split keys until self node has exactly a children
         tree = get_tree_instance()
         while(len(self.handles)) < tree.a - 1:
@@ -648,7 +649,7 @@ class TreeNode:
         if self.children_ids[-1] == DUMMY_STRING:
             if not len(self.children_ids) == self.min_amount_of_children():
                 raise ValueError(f"Node {self.node_id} has DUMMY children left after steal or merge, but has a different amount of children than it is supposed to\nNode data {self},\nmin amount of children: {self.min_amount_of_children()}")
-            tree.leaf_nodes_with_dummy_children.append(self.node_id)
+            tree.leaf_nodes_with_dummy_children.append_to_custom_list(self.node_id)
 
         write_node(self)
         write_node(parent_node)
