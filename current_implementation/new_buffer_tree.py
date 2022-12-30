@@ -232,7 +232,7 @@ class TreeNode:
         return len(self.buffer_block_ids) > 0
 
     def is_root(self):
-        return BufferTree.tree_instance.root_node_id == self.node_id
+        return get_tree_instance().root_node_id == self.node_id
 
     def clear_internal_buffer(self, enforce_buffer_emptying_enabled):
         def determine_if_all_children_are_internal_nodes():
