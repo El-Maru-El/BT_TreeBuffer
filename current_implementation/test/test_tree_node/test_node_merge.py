@@ -54,8 +54,6 @@ class TestTreeNodeSplit(unittest.TestCase):
 
         self.assertEqual(deque([root_node.node_id]), tree.node_to_steal_or_merge_queue)
 
-
-
     @staticmethod
     def make_left_node(tree):
         left_neighbor_handles = [f'l_cur_split_{i}' for i in range(tree.a + tree.t - 1)]
