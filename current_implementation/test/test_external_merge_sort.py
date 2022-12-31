@@ -107,6 +107,7 @@ class TestExternalMergeSort(unittest.TestCase):
         new_sorted_file_path = external_merge_sort_buffer_elements_many_files(node_id, [first_sorted_id, second_sorted_id, third_sorted_id], self.max_elem_in_memory)
         reloaded_elements = read_buffer_elements_from_file_path(new_sorted_file_path)
         self.assertEqual(reloaded_elements, all_elements)
+
     # TODO Write tests with duplicates once BufferElement-timestamps are fixed
 
 

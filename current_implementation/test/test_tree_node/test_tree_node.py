@@ -24,11 +24,13 @@ class TestTreeNode(unittest.TestCase):
 
         elements_trimmed = TreeNode.annihilate_insertions_deletions_with_matching_timestamps(buffer_elements_to_be_trimmed)
 
-        self.assertEqual(elements_trimmed, expected_buffer_elements)
+        self.assertEqual(expected_buffer_elements, elements_trimmed)
 
     def test_annihilate_function_on_empty_list(self):
         # Shouldn't be called with an empty list, but whatever
-        TreeNode.annihilate_insertions_deletions_with_matching_timestamps([])
+        empty_list = []
+        TreeNode.annihilate_insertions_deletions_with_matching_timestamps(empty_list)
+        self.assertEqual([], empty_list)
 
     def test_pass_elements_to_children(self):
         tree = self.create_dummy_tree()
