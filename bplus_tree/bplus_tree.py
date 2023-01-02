@@ -3,10 +3,6 @@ import math
 from itertools import chain
 from bplus_tree.bplus_helpers import *
 
-# TODO Debug
-global_stolen_list = []
-# TODO Debug above
-
 
 class BPlusTree:
 
@@ -33,9 +29,7 @@ class BPlusTree:
         leaf_node, key_is_above_leaf_node_in_tree, _ = self.find_leaf_node_for_key_iteratively(self.root_node_id, k)
         leaf_node.leaf_insert_key_value(k, v, key_is_above_leaf_node_in_tree)
         if len(leaf_node.children) > self.b:
-            # TODO Split
             self.iteratively_split_nodes(leaf_node)
-            # TODO Who writes the nodes when?
         else:
             write_node(leaf_node)
 
@@ -73,17 +67,9 @@ class BPlusTree:
                 if len(neighbor_node.children) > self.a:
                     self.steal_from_neighbor(too_small_node, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor)
                     write_node(neighbor_node)
-                    last_was_steal = True
                 else:
                     self.merge_with_neighbor(too_small_node, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor)
                     delete_node_data_from_ext_memory(neighbor_node.node_id)
-                    last_was_steal = True
-
-                # TODO Debug:
-                global_stolen_list.append((too_small_node.node_id, neighbor_node.node_id, last_was_steal))
-                [print("#"*90) for _ in range(2)]
-                [print(some_tuple) for some_tuple in global_stolen_list[-5:]]
-                # TODO Debug above
 
                 write_node(too_small_node)
 
