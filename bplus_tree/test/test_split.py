@@ -1,8 +1,13 @@
 import unittest
-from bplus_tree.my_own_bplus_tree import BPlusTree, BPlusTreeNode, write_node, load_node
+from bplus_tree.bplus_tree import BPlusTree, BPlusTreeNode, write_node, load_node
+from bplus_tree.bplus_helpers import *
+from current_implementation.create_comparable_string import create_string_from_int
 
 
 class TestSplit(unittest.TestCase):
+
+    def setUp(self):
+        clean_up_and_initialize_resource_directories()
 
     def test_split_node_even_order(self):
         tree = BPlusTree(4)
@@ -76,3 +81,31 @@ class TestSplit(unittest.TestCase):
         reloaded_new_neighbor = load_node(reloaded_parent_node.children[1])
         self.assertEqual(expected_new_neighbor_split_keys, reloaded_new_neighbor.split_keys)
         self.assertEqual(expected_new_neighbor_children, reloaded_new_neighbor.children)
+
+    def test_split_on_root(self):
+        order = 4
+        tree = BPlusTree(order=order)
+        biggest_int = 4
+        # Since we have one Dummy Child, it will split here
+        elements = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
+        for k, v in elements:
+            tree.insert_to_tree(k, v)
+
+        root_node = load_node(tree.root_node_id)
+        self.assertEqual(1, len(root_node.split_keys))
+        self.assertEqual(2, len(root_node.children))
+        self.assertTrue(root_node.is_internal_node)
+
+        left_child = load_node(root_node.children[0])
+        right_child = load_node(root_node.children[1])
+
+        self.assertEqual([0], left_child.split_keys)
+        self.assertEqual(['0', '1'], left_child.children)
+        self.assertEqual(root_node.node_id, left_child.parent_id)
+        self.assertFalse(left_child.is_internal_node)
+
+        self.assertEqual([2, 3], right_child.split_keys)
+        self.assertEqual(['2', '3', get_dummy_infinity_child()], right_child.children)
+        self.assertEqual(root_node.node_id, right_child.parent_id)
+        self.assertFalse(right_child.is_internal_node)
+

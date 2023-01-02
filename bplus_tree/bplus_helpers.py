@@ -12,6 +12,10 @@ NODES_DIR = os.path.join(WORKING_DIR, 'nodes_collection')
 NODE_STRING = 'node_'
 
 
+TRUE_STRING = 'T'
+FALSE_STRING = 'F'
+SEP = ';'
+
 node_counter = 0
 
 
@@ -49,6 +53,8 @@ def delete_all_tree_data():
         shutil.rmtree(NODES_DIR)
 
 
-TRUE_STRING = 'T'
-FALSE_STRING = 'F'
-SEP = ';'
+def delete_node_data_from_ext_memory(node_id):
+    file_path = get_file_path_for_node_id(node_id)
+    os.remove(file_path)
+
+
