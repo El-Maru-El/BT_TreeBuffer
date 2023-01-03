@@ -1,5 +1,5 @@
 import unittest
-from bplus_tree.my_own_bplus_tree import BPlusTree, BPlusTreeNode, load_node, write_node
+from bplus_tree.bplus_tree import BPlusTree, BPlusTreeNode, load_node, write_node
 from bplus_tree.bplus_helpers import clean_up_and_initialize_resource_directories
 
 
