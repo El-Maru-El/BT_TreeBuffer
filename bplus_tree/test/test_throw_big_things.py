@@ -36,7 +36,7 @@ class TestALotOfAction(unittest.TestCase):
 
         self.assertEqual(expected_elements, found_elements)
 
-    def test_insert_elements_even_tree_order_arbitrary_element_order(self):
+    def test_insert_elements_even_tree_order_inside_to_outside_element_order(self):
         tree = BPlusTree(100)
 
         biggest_int = 10000
@@ -54,6 +54,31 @@ class TestALotOfAction(unittest.TestCase):
             if lower_ind >= 0:
                 k, v = key_values_sorted[lower_ind]
                 lower_ind -= 1
+                tree.insert_to_tree(k, v)
+
+        found_leaf_elements = get_all_leaf_elements(tree)
+
+        self.assertEqual(values_sorted, found_leaf_elements)
+
+    def test_insert_elements_even_tree_order_outside_to_inside_element_order(self):
+        tree = BPlusTree(100)
+
+        biggest_int = 10000
+
+        upper_ind = biggest_int - 1
+        lower_ind = 0
+
+        key_values_sorted = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
+        values_sorted = [v for _, v in key_values_sorted]
+
+        while lower_ind <= upper_ind:
+            if upper_ind < len(key_values_sorted):
+                k, v = key_values_sorted[upper_ind]
+                upper_ind -= 1
+                tree.insert_to_tree(k, v)
+            if lower_ind >= 0:
+                k, v = key_values_sorted[lower_ind]
+                lower_ind += 1
                 tree.insert_to_tree(k, v)
 
         found_leaf_elements = get_all_leaf_elements(tree)
@@ -107,5 +132,3 @@ class TestALotOfAction(unittest.TestCase):
         found_leaf_elements = get_all_leaf_elements(tree)
 
         self.assertEqual(expected_values, found_leaf_elements)
-
-        # Now delete a few elements
