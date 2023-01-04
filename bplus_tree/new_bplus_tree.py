@@ -36,7 +36,7 @@ class AbstractNode:
         child_index = self.child_index_for_key(ele)
 
         # If the element doesn't exist yet, insert it
-        if self.children[child_index] != ele:
+        if child_index == len(self.children) or self.children[child_index] != ele:
             self.children.insert(child_index, ele)
 
     def is_leaf(self):
@@ -82,8 +82,8 @@ class BPlusTree:
         # TODO Check up in the end: Do we always update it?
         self.root_node_type = NodeType.LEAF
 
-        # TODO Create Dummy Root Leaf
         root_node = self.create_root_leaf()
+        write_node(root_node)
         self.root_node_id = root_node.node_id
 
     @staticmethod
@@ -120,7 +120,7 @@ class BPlusTree:
             neighbor_node, split_key_for_parent = node_to_be_split.split_return_new_neighbor_and_split_key_to_parent()
 
             if self.root_node_id == node_to_be_split.node_id:
-                # Create new root
+                # Create new root, if previous root has gotten too big
                 new_root_node_type = self.parent_type_of_node_type(node_to_be_split.node_type)
                 parent_node = BPlusTreeNode(node_type=new_root_node_type, split_keys=[split_key_for_parent], children=[neighbor_node.node_id, node_to_be_split.node_id])
                 self.root_node_type = new_root_node_type
@@ -133,6 +133,8 @@ class BPlusTree:
                 parent_node.split_keys.insert(child_index, split_key_for_parent)
                 parent_node.children.insert(child_index, neighbor_node.node_id)
 
+            write_node(node_to_be_split)
+
             if len(parent_node.children) > self.b:
                 node_to_be_split = parent_node
             else:
@@ -140,7 +142,6 @@ class BPlusTree:
                 node_to_be_split = None
 
             write_node(neighbor_node)
-            write_node(node_to_be_split)
 
     @staticmethod
     def find_leaf_for_element_iteratively(current_node: AbstractNode, ele):
@@ -204,7 +205,7 @@ class BPlusTreeNode(AbstractNode):
 
     def split_return_new_neighbor_and_split_key_to_parent(self):
         # Writes the parent pointers of the children that were passed to neighbor node
-        # Creates a new neighbor node, but does not write it
+        # Creates a new neighbor node, but does not write it or any other nodes (except described above)
 
         index_split_key_to_parent = (len(self.split_keys) - 1) // 2
 
