@@ -33,7 +33,7 @@ class AbstractNode:
         if not self.is_leaf():
             raise ValueError(f"Inserting to a leaf node was called on node {self.node_id}, but this node is not a leaf node\nValue: {ele}\nNode data: {self}")
 
-        child_index = self.child_index_for_key(ele)
+        child_index = self.child_index_according_to_split_keys(ele)
 
         # If the element doesn't exist yet, insert it
         if child_index == len(self.children) or self.children[child_index] != ele:
@@ -53,7 +53,7 @@ class AbstractNode:
         raise NotImplementedError()
 
     @abstractmethod
-    def child_index_for_key(self, ele):
+    def child_index_according_to_split_keys(self, ele):
         raise NotImplementedError()
 
     def find_fitting_child_for_key(self, ele):
@@ -100,10 +100,13 @@ class BPlusTree:
         else:
             write_node(leaf)
 
+    def load_root(self):
+        return load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
+
     # TODO: Adapt delete
     def delete_from_tree(self, k):
 
-        root_node = load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
+        root_node = self.load_root()
         leaf = self.find_leaf_for_element_iteratively(root_node, k)
 
         leaf.leaf_delete_child_for_key(k)
@@ -129,7 +132,7 @@ class BPlusTree:
                 node_to_be_split.parent_id = parent_node.node_id
             else:
                 parent_node = load_node(node_to_be_split.parent_id, is_leaf=False)
-                child_index = parent_node.child_index_for_key(node_to_be_split.node_id)
+                child_index = parent_node.index_for_child(node_to_be_split.node_id)
                 parent_node.split_keys.insert(child_index, split_key_for_parent)
                 parent_node.children.insert(child_index, neighbor_node.node_id)
 
@@ -189,7 +192,7 @@ class BPlusTreeNode(AbstractNode):
     def index_for_child(self, child):
         return self.children.index(child)
 
-    def child_index_for_key(self, ele):
+    def child_index_according_to_split_keys(self, ele):
         i = 0
         while i < len(self.split_keys) and ele > self.split_keys[i]:
             i += 1
@@ -200,7 +203,7 @@ class BPlusTreeNode(AbstractNode):
         if len(self.split_keys) != len(self.children) - 1:
             raise ValueError(f"Node {self.node_id} has not been initialised properly, length of split keys and children do not fit\nNode data {self}")
 
-        child_index = self.child_index_for_key(k)
+        child_index = self.child_index_according_to_split_keys(k)
         return self.children[child_index]
 
     def split_return_new_neighbor_and_split_key_to_parent(self):
@@ -236,7 +239,7 @@ class Leaf(AbstractNode):
     def __init__(self, node_id=None, children=None, parent_id=None):
         super().__init__(NodeType.LEAF, node_id, children, parent_id)
 
-    def child_index_for_key(self, ele):
+    def child_index_according_to_split_keys(self, ele):
         i = 0
         while i < len(self.children) and ele > self.children[i]:
             i += 1

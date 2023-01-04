@@ -1,5 +1,4 @@
 from bplus_tree.new_bplus_tree import *
-from bplus_tree.bplus_helpers import get_dummy_infinity_child
 
 
 def get_all_leaf_elements(tree: BPlusTree):
@@ -7,12 +6,12 @@ def get_all_leaf_elements(tree: BPlusTree):
     root_node = load_node(tree.root_node_id, tree.root_node_type == NodeType.LEAF)
     recurse_through_tree(elements, root_node)
 
-    return elements[:-1]
+    return elements
 
 
 def recurse_through_tree(elements, current_node: BPlusTreeNode):
     if current_node.is_leaf():
-        elements.extend()
+        elements.extend(current_node.children)
     else:
         child_is_leaf = current_node.is_leaf_node()
         for child_id in current_node.children:
