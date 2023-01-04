@@ -167,6 +167,10 @@ class BPlusTree:
         elif node.is_leaf():
             return 0
 
+    def iteratively_steal_or_merge_for_node(self, leaf):
+        # TODO
+        pass
+
 
 class BPlusTreeNode(AbstractNode):
 
@@ -272,7 +276,6 @@ def load_node_non_leaf(node_id) -> BPlusTreeNode:
     num_handles = int(data[1])
     index = 2
     split_keys = data[index:index + num_handles]
-    split_keys = [int(split_key_string) for split_key_string in split_keys]
     index += num_handles
 
     num_children = int(data[index])
