@@ -108,21 +108,18 @@ class TestALotOfAction(unittest.TestCase):
         tree = BPlusTree(100)
 
         biggest_int = 10000
-        key_values_sorted = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
-        values_sorted = [v for _, v in key_values_sorted]
+        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
 
-        for k, v in key_values_sorted:
-            tree.insert_to_tree(k, v)
+        for ele in elements:
+            tree.insert_to_tree(ele)
 
         ints_to_be_remove = [1, 4, 20, 300, 4000, 5734, 2387, 9748, 4323]
-        key_values_to_be_removed = [(i, create_string_from_int(i, biggest_int)) for i in ints_to_be_remove]
-        removed_keys = [k for k, _ in key_values_to_be_removed]
-        removed_values = [v for _, v in key_values_to_be_removed]
+        elements_to_be_removed = [create_string_from_int(i, biggest_int) for i in ints_to_be_remove]
 
-        expected_values = [v for v in values_sorted if v not in removed_values]
+        expected_values = [ele for ele in elements if ele not in elements_to_be_removed]
 
-        for k in removed_keys:
-            tree.delete_from_tree(k)
+        for ele in elements_to_be_removed:
+            tree.delete_from_tree(ele)
 
         found_leaf_elements = get_all_leaf_elements(tree)
 

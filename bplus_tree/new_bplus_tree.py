@@ -26,7 +26,6 @@ class AbstractNode:
         self.children = children
         self.parent_id = parent_id
 
-        # TODO: Everything referencing node_type must be adapted
         self.node_type = NodeType(node_type)
 
     def leaf_insert_key_value(self, ele):
@@ -68,16 +67,38 @@ class AbstractNode:
     def children_are_leaves(self):
         return self.is_leaf_node()
 
+    @abstractmethod
+    def steal_from_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def merge_with_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+        raise NotImplementedError()
+
 
 class BPlusTree:
 
     tree_instance = None
 
-    def __init__(self, order):
+    def __init__(self, order, min_leaf_size=None, max_leaf_size=None):
         clean_up_and_initialize_resource_directories()
+
+        if None in [min_leaf_size, max_leaf_size] and min_leaf_size != max_leaf_size:
+            raise ValueError("If providing lower or upper bound for leaf size, BOTH have to be provided")
+
         self.tree_instance = self
         self.b = order
         self.a = math.ceil(order / 2)
+
+        if min_leaf_size is None:
+            min_leaf_size = self.a
+            max_leaf_size = self.b
+
+        if max_leaf_size < 2 * min_leaf_size - 1:
+            raise ValueError(f"Max leaf size ({max_leaf_size} must be at least twice as big as min leaf size ({min_leaf_size})")
+
+        self.min_leaf_size = min_leaf_size
+        self.max_leaf_size = max_leaf_size
 
         # TODO Check up in the end: Do we always update it?
         self.root_node_type = NodeType.LEAF
@@ -103,7 +124,6 @@ class BPlusTree:
     def load_root(self):
         return load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
 
-    # TODO: Adapt delete
     def delete_from_tree(self, k):
 
         root_node = self.load_root()
@@ -164,16 +184,57 @@ class BPlusTree:
             return NodeType.INTERNAL_NODE
 
     def min_amount_of_children_for_node(self, node):
-        if node.node_id != self.root_node_id:
-            # TODO Will this value stay the same, even for Leaf-Blocks?
-            return self.a
-        # Else: Node is root
-        elif node.is_leaf():
-            return 0
+        if node.is_leaf():
+            if node.node_id == self.root_node_id:
+                return 0
+            else:
+                return self.min_leaf_size
+        else:
+            if node.node_id == self.root_node_id:
+                return 2
+            else:
+                return self.a
 
     def iteratively_steal_or_merge_for_node(self, leaf):
-        # TODO
-        pass
+        def sanity_check():
+            if (too_small_node.node_id == self.root_node_id) != (too_small_node.parent_id is None):
+                raise ValueError(f"Inconsistency: tree root node: {self.root_node_id}, node {too_small_node}: It is root <-> Node has no parent")
+
+        too_small_node = leaf
+
+        while too_small_node:
+            sanity_check()
+            if too_small_node.node_id == self.root_node_id:
+                self.handle_too_small_root_node(too_small_node)
+                too_small_node = None
+            else:
+                parent_node = load_node_non_leaf(too_small_node.parent_id)
+                neighbor_node, parent_split_key_index, is_left_neighbor = parent_node.get_neighbor_of_child_id(too_small_node.node_id)
+                if len(neighbor_node.children) > self.min_amount_of_children_for_node(neighbor_node):
+                    too_small_node.steal_from_neighbor(parent_split_key_index, neighbor_node, parent_node, is_left_neighbor)
+                    write_node(neighbor_node)
+                else:
+                    too_small_node.merge_with_neighbor(parent_split_key_index, neighbor_node, parent_node, is_left_neighbor)
+                    delete_node_data_from_ext_memory(neighbor_node.node_id)
+
+                write_node(too_small_node)
+
+                if len(parent_node.children) < self.min_amount_of_children_for_node(parent_node):
+                    too_small_node = parent_node
+                else:
+                    write_node(parent_node)
+                    too_small_node = None
+
+    def handle_too_small_root_node(self, old_root_node):
+        if len(old_root_node.children) != 1 or old_root_node.is_leaf():
+            raise ValueError(f"Trying to handle root {old_root_node}. It does not have exactly one child or is a Leaf Node")
+
+        self.root_node_id = old_root_node.children[0]
+        new_root_node = load_node(old_root_node.children[0], is_leaf=old_root_node.is_leaf_node())
+        self.root_node_type = new_root_node.node_type
+        new_root_node.parent_id = None
+        write_node(new_root_node)
+        delete_node_data_from_ext_memory(old_root_node.node_id)
 
 
 class BPlusTreeNode(AbstractNode):
@@ -230,8 +291,98 @@ class BPlusTreeNode(AbstractNode):
         write_node(new_left_neighbor_node)
         return new_left_neighbor_node, split_key_to_parent
 
+    def get_neighbor_of_child_id(self, child_id):
+        child_index = self.index_for_child(child_id)
+        if child_index != 0:
+            return load_node(self.children[child_index-1], is_leaf=self.is_leaf_node()), child_index - 1, True
+
+        else:
+            return load_node(self.children[child_index+1], is_leaf=self.is_leaf_node()), child_index, False
+
+    def steal_from_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+        # Writes stolen childrens parent pointer, nothing else
+
+        split_key_from_parent = parent_node.split_keys[parent_split_key_index]
+
+        if is_left_neighbor:
+            split_key_to_parent = neighbor_node.split_keys.pop(-1)
+            stolen_child = neighbor_node.children.pop(-1)
+            self.children.insert(0, stolen_child)
+            self.split_keys.insert(0, split_key_from_parent)
+        else:
+            split_key_to_parent = neighbor_node.split_keys.pop(0)
+            stolen_child = neighbor_node.children.pop(0)
+            self.children.append(stolen_child)
+            self.split_keys.append(split_key_from_parent)
+
+        parent_node.split_keys[parent_split_key_index] = split_key_to_parent
+
+        # TODO Overwrite parent pointers only
+        stolen_child_node = load_node(stolen_child, is_leaf=self.is_leaf_node())
+        stolen_child_node.parent_id = self.node_id
+        write_node(stolen_child_node)
+
+    def merge_with_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+        # Writes stolen childrens parent pointer, nothing else
+
+        split_key_from_parent = parent_node.split_keys[parent_split_key_index]
+
+        if is_left_neighbor:
+            left_node = neighbor_node
+            right_node = self
+        else:
+            left_node = self
+            right_node = neighbor_node
+
+        self.split_keys = list(chain(left_node.split_keys, [split_key_from_parent], right_node.split_keys))
+        self.children = list(chain(left_node.children, right_node.children))
+
+        if is_left_neighbor:
+            neighbor_index_in_parent = parent_split_key_index
+        else:
+            neighbor_index_in_parent = parent_split_key_index + 1
+
+        del parent_node.children[neighbor_index_in_parent]
+        del parent_node.split_keys[parent_split_key_index]
+
+        # TODO: Overwrite parent pointer only
+        for stolen_child_node_id in neighbor_node.children:
+            stolen_child_node = load_node(stolen_child_node_id, is_leaf=self.is_leaf_node())
+            stolen_child_node.parent_id = self.node_id
+            write_node(stolen_child_node)
+
 
 class Leaf(AbstractNode):
+
+    def merge_with_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+        if is_left_neighbor:
+            left_node = neighbor_node
+            right_node = self
+        else:
+            left_node = self
+            right_node = neighbor_node
+
+        self.children = list(chain(left_node.children, right_node.children))
+
+        if is_left_neighbor:
+            neighbor_index_in_parent = parent_split_key_index
+        else:
+            neighbor_index_in_parent = parent_split_key_index + 1
+
+        del parent_node.children[neighbor_index_in_parent]
+        del parent_node.split_keys[parent_split_key_index]
+
+    def steal_from_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+        if is_left_neighbor:
+            stolen_element = neighbor_node.children.pop(-1)
+            self.children.insert(0, stolen_element)
+            split_key_to_parent = neighbor_node.children[-1]
+        else:
+            stolen_element = neighbor_node.children.pop(0)
+            self.children.append(stolen_element)
+            split_key_to_parent = stolen_element
+
+        parent_node.split_keys[parent_split_key_index] = split_key_to_parent
 
     def find_fitting_child_for_key(self, ele):
         raise NotImplementedError("Shouldn't need this method on a Leaf Node....")
@@ -275,7 +426,7 @@ def load_node_non_leaf(node_id) -> BPlusTreeNode:
     with open(file_path, 'r') as f:
         data = f.read().split(SEP)
 
-    is_internal_node = data[0]
+    node_type = NodeType(data[0])
 
     num_handles = int(data[1])
     index = 2
@@ -291,7 +442,7 @@ def load_node_non_leaf(node_id) -> BPlusTreeNode:
         parent_id = None
     index += 1
 
-    node_instance = BPlusTreeNode(node_type=NodeType(is_internal_node),
+    node_instance = BPlusTreeNode(node_type=node_type,
                                   node_id=node_id,
                                   split_keys=split_keys,
                                   children=children,
