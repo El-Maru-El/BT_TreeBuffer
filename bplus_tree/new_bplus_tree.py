@@ -165,7 +165,7 @@ class BPlusTree:
             return self.a
         # Else: Node is root
         elif node.is_leaf():
-            return 1
+            return 0
 
 
 class BPlusTreeNode(AbstractNode):
