@@ -5,6 +5,7 @@ from current_implementation.constants_and_helpers import *
 from current_implementation.double_linked_list import DoublyLinkedList
 from current_implementation.merge_sort import external_merge_sort_buffer_elements_many_files
 from collections import deque
+from benchmarking.TreeTrackingHandler import TreeTrackingHandler
 
 
 class BufferTree:
@@ -36,8 +37,18 @@ class BufferTree:
         self.leaf_nodes_with_dummy_children = DoublyLinkedList()
         self.node_to_steal_or_merge_queue = deque()
 
+        # Starts as disabled, must be enabled. If disabled and calls are made to the tracking Handler, the tracking Handler won't do anything
+        self.tracking_handler = TreeTrackingHandler()
+
         BufferTree.tree_instance = self
         write_node(root_node)
+
+    # Must be called from outside this script
+    def start_tracking_handler(self):
+        self.tracking_handler.start_tracking()
+
+    def stop_tracking_handler(self):
+        self.tracking_handler.stop_tracking()
 
     @staticmethod
     def calculate_s(a, b):
@@ -70,17 +81,24 @@ class BufferTree:
                 self.clear_all_buffers_and_rebalance()
 
     def push_internal_buffer_to_root_return_root(self):
+        self.tracking_handler.enter_initial_buffer_emptying_mode()
+
         root = load_node(self.root_node_id)
         root.add_block_to_buffer(self.tree_buffer.get_elements())
         write_node(root)
         self.tree_buffer.clear_elements()
 
+        self.tracking_handler.exit_initial_buffer_emptying_mode()
         return root
 
     def flush_all_buffers(self):
+        self.tracking_handler.enter_buffer_flush_mode()
+
         root = self.push_internal_buffer_to_root_return_root()
         root.add_self_to_buffer_emptying_queue()
         self.clear_all_buffers_and_rebalance(enforce_buffer_emptying_enabled=True)
+
+        self.tracking_handler.exit_buffer_flush_mode()
 
     def clear_all_buffers_and_rebalance(self, enforce_buffer_emptying_enabled=False):
         self.clear_all_buffers_only(enforce_buffer_emptying_enabled)
@@ -91,13 +109,17 @@ class BufferTree:
         self.clear_full_leaf_buffers()
 
     def clear_full_internal_buffers(self, enforce_buffer_emptying_enabled):
+        self.tracking_handler.enter_internal_buffer_emptying_mode()
         while self.internal_node_buffer_emptying_queue:
             node_id = self.internal_node_buffer_emptying_queue.popleft()
             node = load_node(node_id)
             node.clear_internal_buffer(enforce_buffer_emptying_enabled)
             write_node(node)
+        self.tracking_handler.exit_internal_buffer_emptying_mode()
 
     def clear_full_leaf_buffers(self):
+        self.tracking_handler.enter_leaf_buffer_emptying_mode()
+
         while not self.leaf_node_buffer_emptying_queue.is_empty():
             node_id = self.leaf_node_buffer_emptying_queue.pop_first()
             node = load_node(node_id)
@@ -105,6 +127,8 @@ class BufferTree:
             node.clear_leaf_buffer()
 
             write_node(node)
+
+        self.tracking_handler.exit_leaf_buffer_emptying_mode()
 
     def handle_leaf_nodes_with_dummy_children(self):
         def load_parent_neighbor_left(node: TreeNode):
@@ -117,6 +141,7 @@ class BufferTree:
             loaded_neighbor = load_node(some_neighbor_id)
             return loaded_parent_node, loaded_neighbor, is_left
 
+        self.tracking_handler.enter_rebalance_mode()
         # If there are nodes with too few children -> Handle those first
         # If there are leaf nodes with dummy children -> Delete dummy until it has too few children
         while not self.leaf_nodes_with_dummy_children.is_empty() or self.node_to_steal_or_merge_queue:
@@ -146,6 +171,8 @@ class BufferTree:
                 leaf_node = load_node(leaf_node_id)
                 leaf_node.delete_dummy_blocks_from_leaf_node_until_too_few_children()
                 write_node(leaf_node)
+
+        self.tracking_handler.exit_rebalance_mode()
 
 
 class TreeNode:
@@ -282,14 +309,18 @@ class TreeNode:
         if self.is_internal_node():
             raise ValueError(f"Called clearing leaf buffer for node {self.node_id}, but this node is an internal node.\nChildren-Ids: {self.children_ids}\nParent-Id: {self.parent_id}")
 
+        if not self.has_buffer_elements():
+            return
+
         # self node is written in callee
         tree = get_tree_instance()
 
         num_children_before = len(self.children_ids)
 
         # In case we have an empty buffer, sorted_ids will be []
-        sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
-        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
+
+        sorted_filepath = self.everything_for_external_merge_sort_get_file_path()
+
         self.last_buffer_size = 0
 
         self.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
@@ -304,6 +335,18 @@ class TreeNode:
                 tree.leaf_nodes_with_dummy_children.append_to_custom_list(self.node_id)
 
             # Else: We should be good otherwise, we don't have to re-balance since we still have a(or 0 if root) <= num_children <= b
+
+    def everything_for_external_merge_sort_get_file_path(self):
+        get_tracking_handler_instance().enter_external_merge_sort_on_buffer_mode()
+
+        tree = get_tree_instance()
+
+        sorted_ids = self.prepare_buffer_blocks_into_manageable_sorted_files()
+        sorted_filepath = external_merge_sort_buffer_elements_many_files(self.node_id, sorted_ids, tree.M)
+
+        get_tracking_handler_instance().exit_external_merge_sort_on_buffer_mode()
+
+        return sorted_filepath
 
     def create_dummy_children(self):
         if len(self.handles) + 1 != len(self.children_ids) and not len(self.children_ids) == 0:
@@ -331,12 +374,16 @@ class TreeNode:
     def split_leaf_node(self):
         # self node is written in callee
 
+        get_tracking_handler_instance().enter_split_mode()
+
         self.split_node()
         tree = get_tree_instance()
         while tree.node_to_split_queue:
             node_instance_to_be_split = tree.node_to_split_queue.popleft()
             node_instance_to_be_split.split_node()
             write_node(node_instance_to_be_split)
+
+        get_tracking_handler_instance().exit_split_mode()
 
     def split_node(self, loaded_child_node=None):
         # self node is written somewhere in callee
@@ -406,7 +453,7 @@ class TreeNode:
 
     def identify_handles_and_split_keys_to_be_inserted(self, num_children_before):
         if num_children_before > 0:
-            # num_to_be_inserted will always be > 0, so the list trimming will work find
+            # num_to_be_inserted will always be > 0 when this function is called, so the list trimming will work fine
             num_to_be_inserted = len(self.children_ids) - num_children_before
             split_keys_to_be_inserted = self.handles[-num_to_be_inserted:]
             self.handles = self.handles[:num_children_before - 1]
@@ -425,6 +472,9 @@ class TreeNode:
         return list(zip(split_keys_to_be_inserted, children_to_be_inserted))
 
     def merge_sorted_buffer_with_leaf_blocks(self, sorted_filepath):
+
+        get_tracking_handler_instance().enter_merge_leaf_with_buffer_mode()
+
         def new_leaf():
             new_leaf_id = generate_new_leaf_id()
             new_split_keys.append(new_leaf_block_elements[-1])
@@ -438,6 +488,7 @@ class TreeNode:
             consumed_child_counter = 0
 
             old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
+            # TODO Maru: How to get those tracked?
             sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
 
             new_leaf_block_elements = []
@@ -507,9 +558,12 @@ class TreeNode:
         self.handles = new_split_keys
         self.children_ids = new_leaf_ids
 
+        get_tracking_handler_instance().exit_merge_leaf_with_buffer_mode()
+
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
-        # TODO Read size should be changed here: What else is internal memory right now that takes space? Self.handles could be up to B elements. What else?
-        read_size = get_tree_instance().m
+        # Is read size m - 1 good? Assume up to 1 block worth of elements for other requirements to internal memory (queues, over-head and so on...)
+
+        read_size = get_tree_instance().m - 1
 
         sorted_ids = []
         while self.buffer_block_ids:
@@ -668,8 +722,13 @@ class TreeNode:
 
     # Don't call this for root, root needs to be handled separately
     def merge_with_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
+        def sanity_check():
+            if len(left_node.children_ids) != 0 or len(left_node.handles) != 0:
+                raise ValueError(f"Tried to delete LAST dummy child from node {left_node}, but it still has split-keys or children??")
         # Our invariant makes sure there aren't any DUMMY children in neighbor node
         # Only writes childrens new parent pointer
+
+        get_tracking_handler_instance().enter_merge_with_neighbor_mode()
 
         tree = get_tree_instance()
         child_index_in_parent = parent_node.index_for_child_id(self.node_id)
@@ -701,12 +760,18 @@ class TreeNode:
         all_left_node_children_ids_were_dummys = left_node.children_ids[-1] == DUMMY_STRING
         if all_left_node_children_ids_were_dummys:
             del left_node.children_ids[-1]
+            sanity_check()
+            split_key_from_parent = DUMMY_STRING
             right_node.children_ids.append(DUMMY_STRING)
+
+        # If all children in right node are dummies, also overwrite split_key_from_parent:
+        if right_node.children_ids[0] == DUMMY_STRING:
+            split_key_from_parent = DUMMY_STRING
 
         new_children_ids_list = list(itertools.chain(left_node.children_ids, right_node.children_ids))
 
         if all_left_node_children_ids_were_dummys:
-            new_split_keys_list = list(itertools.chain(right_node.handles, [DUMMY_STRING]))
+            new_split_keys_list = list(itertools.chain(right_node.handles, [split_key_from_parent]))
         else:
             new_split_keys_list = list(itertools.chain(left_node.handles, [split_key_from_parent], right_node.handles))
 
@@ -728,10 +793,14 @@ class TreeNode:
 
         # Neighbor node will be deleted in super method anyway, no need to change the neighbor node instance
 
+        get_tracking_handler_instance().exit_merge_with_neighbor_mode()
+
     def steal_from_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
         # Only writes the stolen children's parent pointer
         tree = get_tree_instance()
         num_children_to_steal = tree.s
+
+        get_tracking_handler_instance().enter_steal_from_neighbor_mode()
 
         if len(neighbor_node.children_ids) < tree.a + tree.s:
             raise ValueError(f"Node {self.node_id} wants to steal {num_children_to_steal} from neighbor {neighbor_node.node_id}, but neighbor has only len{neighbor_node.children_ids} children.\nThose children are: {neighbor_node.children_ids}")
@@ -797,6 +866,8 @@ class TreeNode:
 
         # If we still have dummy children, calling method has to take care of that
 
+        get_tracking_handler_instance().exit_steal_from_neighbor_mode()
+
     def move_dummy_to_the_back_of_lists(self, stolen_split_keys, stolen_children):
         # Will remove all DUMMY children and split-keys and move them to the back of the stolen lists
         #  It will not move self.children_ids[0] though, since there is no DUMMY split-key for that one in self node, and that needs to be handled in a special way
@@ -843,6 +914,8 @@ class TreeNode:
             counter -= 1
 
     def root_node_is_too_small(self):
+
+        get_tracking_handler_instance().enter_root_node_deletion_mode()
         # Deletes itself, meaning: From memory, tells child it does not have a parent anymore, changes root pointer in tree
         tree = get_tree_instance()
         if not self.is_root():
@@ -858,6 +931,8 @@ class TreeNode:
 
         tree.root_node_id = self.children_ids[0]
         delete_node_from_ext_memory(self.node_id)
+
+        get_tracking_handler_instance().exit_root_node_deletion_mode()
 
     def add_self_to_buffer_emptying_queue(self):
         # This function assumes that the node is not in the leaf queue already
@@ -909,9 +984,8 @@ def load_node(node_id) -> TreeNode:
     if node_id is None:
         raise ValueError("Tried loading node, but node_id was not provided (is None)")
 
-    file_path = node_information_file_path_from_id(node_id)
-    with open(file_path, 'r') as f:
-        data = f.read().split(SEP)
+    raw_data = load_node_raw(node_id)
+    data = raw_data.split(SEP)
 
     if data[0] == TRUE_STRING:
         is_internal_node = True
@@ -948,10 +1022,24 @@ def load_node(node_id) -> TreeNode:
         last_buffer_size=last_buffer_size,
         parent_id=parent_id
     )
+
     return node_instance
 
 
+def load_node_raw(node_id):
+    get_tracking_handler_instance().enter_node_read_sub_mode()
+
+    file_path = node_information_file_path_from_id(node_id)
+    with open(file_path, 'r') as f:
+        data = f.read()
+
+    get_tracking_handler_instance().exit_node_read_sub_mode(1)
+    return data
+
+
 def write_node(node: TreeNode):
+    get_tracking_handler_instance().enter_node_write_sub_mode()
+
     if node.is_internal_node():
         is_internal_string = TRUE_STRING
     else:
@@ -967,6 +1055,8 @@ def write_node(node: TreeNode):
     with open(file_path, 'w') as f:
         f.write(output_string)
 
+    get_tracking_handler_instance().exit_node_write_sub_mode(1)
+
 
 # Buffer Block Structure:
 # Each line: Element;Timestamp;Action
@@ -977,27 +1067,38 @@ def read_buffer_block_elements(node_id, buffer_block_id):
 
 
 def read_buffer_elements_from_file_path(file_path):
+    get_tracking_handler_instance().enter_buffer_element_read_sub_mode()
+
     with open(file_path, 'r') as f:
         elements = []
         for line in f:
             elements.append(parse_line_into_buffer_element(line))
 
+    get_tracking_handler_instance().exit_buffer_element_read_sub_mode(len(elements))
     return elements
 
 
 def write_buffer_block(node_id, buffer_block_id, elements):
     buffer_filepath = get_buffer_file_path_from_ids(node_id, buffer_block_id)
 
+    get_tracking_handler_instance().enter_buffer_element_write_sub_mode()
+
     with open(buffer_filepath, 'w') as f:
-        elements_as_str = [element.to_output_string() for element in elements]
-        f.writelines(elements_as_str)
+        for element in elements:
+            f.write(element.to_output_string())
+
+    get_tracking_handler_instance().exit_buffer_element_write_sub_mode(len(elements))
 
 
 def append_to_buffer(node_id, buffer_block_id, elements):
+    get_tracking_handler_instance().enter_buffer_element_write_sub_mode()
+
     buffer_filepath = get_buffer_file_path_from_ids(node_id, buffer_block_id)
     with open(buffer_filepath, 'a') as f:
-        elements_as_str = [element.to_output_string() for element in elements]
-        f.writelines(elements_as_str)
+        for element in elements:
+            f.write(element.to_output_string())
+
+    get_tracking_handler_instance().exit_buffer_element_write_sub_mode(len(elements))
 
 
 def load_buffer_blocks_sort_and_remove_duplicates(node_id, buffer_block_ids):
@@ -1014,6 +1115,8 @@ def load_buffer_elements_from_buffer_blocks_with_ids(node_id, buffer_block_ids) 
 
 
 def read_leaf_block_elements_as_deque(leaf_id):
+    get_tracking_handler_instance().enter_leaf_element_read_sub_mode()
+
     leaf_file_path = get_leaf_file_path_from_id(leaf_id)
     elements = deque()
     with open(leaf_file_path, 'r') as f:
@@ -1021,16 +1124,26 @@ def read_leaf_block_elements_as_deque(leaf_id):
             # The line splitting [:-1] on action gets rid of the line break
             elements.append(line[:-1])
 
+    get_tracking_handler_instance().exit_leaf_element_read_sub_mode(len(elements))
+
     return elements
 
 
 def write_leaf_block(leaf_id, elements):
     leaf_file_path = get_leaf_file_path_from_id(leaf_id)
 
+    get_tracking_handler_instance().enter_leaf_element_write_sub_mode()
+
     with open(leaf_file_path, 'w') as f:
-        elements_in_correct_format = [f'{element}\n' for element in elements]
-        f.writelines(elements_in_correct_format)
+        for element in elements:
+            f.write(f'{element}\n')
+
+    get_tracking_handler_instance().exit_leaf_element_write_sub_mode(len(elements))
 
 
 def get_tree_instance() -> BufferTree:
     return BufferTree.tree_instance
+
+
+def get_tracking_handler_instance() -> TreeTrackingHandler:
+    return get_tree_instance().tracking_handler

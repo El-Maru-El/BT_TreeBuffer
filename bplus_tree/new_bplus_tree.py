@@ -2,8 +2,8 @@
 import math
 from itertools import chain
 from bplus_tree.bplus_helpers import *
-from enum import Enum, unique
 from abc import abstractmethod
+from benchmarking.TreeTrackingHandler import *
 
 
 @unique
@@ -86,7 +86,7 @@ class BPlusTree:
         if None in [min_leaf_size, max_leaf_size] and min_leaf_size != max_leaf_size:
             raise ValueError("If providing lower or upper bound for leaf size, BOTH have to be provided")
 
-        self.tree_instance = self
+        BPlusTree.tree_instance = self
         self.b = order
         self.a = math.ceil(order / 2)
 
@@ -100,6 +100,8 @@ class BPlusTree:
         self.min_leaf_size = min_leaf_size
         self.max_leaf_size = max_leaf_size
 
+        # Starts as disabled, must be enabled. If disabled and calls are made to the tracking Handler, the tracking Handler won't do anything
+        self.tracking_handler = TreeTrackingHandler()
         # TODO Check up in the end: Do we always update it?
         self.root_node_type = NodeType.LEAF
 
@@ -107,12 +109,21 @@ class BPlusTree:
         write_node(root_node)
         self.root_node_id = root_node.node_id
 
+    # Must be called from outside this script
+    def start_tracking_handler(self):
+        self.tracking_handler.start_tracking()
+
+    def stop_tracking_handler(self):
+        self.tracking_handler.stop_tracking()
+
     @staticmethod
     def create_root_leaf():
         # Returns an empty Leaf
         return Leaf()
 
     def insert_to_tree(self, ele):
+        self.tracking_handler.enter_insert_to_tree_mode()
+
         root_node = load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
         leaf = self.find_leaf_for_element_iteratively(root_node, ele)
         leaf.leaf_insert_key_value(ele)
@@ -121,10 +132,13 @@ class BPlusTree:
         else:
             write_node(leaf)
 
+        self.tracking_handler.exit_insert_to_tree_mode()
+
     def load_root(self):
         return load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
 
     def delete_from_tree(self, k):
+        self.tracking_handler.enter_delete_from_tree_mode()
 
         root_node = self.load_root()
         leaf = self.find_leaf_for_element_iteratively(root_node, k)
@@ -136,7 +150,11 @@ class BPlusTree:
         else:
             write_node(leaf)
 
+        self.tracking_handler.exit_delete_from_tree_mode()
+
     def iteratively_split_nodes(self, leaf):
+        self.tracking_handler.enter_split_mode()
+
         node_to_be_split = leaf
 
         while node_to_be_split:
@@ -166,13 +184,17 @@ class BPlusTree:
 
             write_node(neighbor_node)
 
-    @staticmethod
-    def find_leaf_for_element_iteratively(current_node: AbstractNode, ele):
+        self.tracking_handler.exit_split_mode()
+
+    def find_leaf_for_element_iteratively(self, current_node: AbstractNode, ele):
+        self.tracking_handler.enter_find_leaf_mode()
 
         while not current_node.is_leaf():
             node_id = current_node.find_fitting_child_for_key(ele)
 
             current_node = load_node(node_id, current_node.is_leaf_node())
+
+        self.tracking_handler.exit_find_leaf_mode()
 
         return current_node
 
@@ -200,6 +222,8 @@ class BPlusTree:
             if (too_small_node.node_id == self.root_node_id) != (too_small_node.parent_id is None):
                 raise ValueError(f"Inconsistency: tree root node: {self.root_node_id}, node {too_small_node}: It is root <-> Node has no parent")
 
+        self.tracking_handler.enter_rebalance_mode()
+
         too_small_node = leaf
 
         while too_small_node:
@@ -224,6 +248,8 @@ class BPlusTree:
                 else:
                     write_node(parent_node)
                     too_small_node = None
+
+        self.tracking_handler.exit_rebalance_mode()
 
     def handle_too_small_root_node(self, old_root_node):
         if len(old_root_node.children) != 1 or old_root_node.is_leaf():
@@ -302,6 +328,8 @@ class BPlusTreeNode(AbstractNode):
     def steal_from_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
         # Writes stolen childrens parent pointer, nothing else
 
+        get_tracking_handler_instance().enter_steal_from_neighbor_mode()
+
         split_key_from_parent = parent_node.split_keys[parent_split_key_index]
 
         if is_left_neighbor:
@@ -322,8 +350,12 @@ class BPlusTreeNode(AbstractNode):
         stolen_child_node.parent_id = self.node_id
         write_node(stolen_child_node)
 
+        get_tracking_handler_instance().exit_steal_from_neighbor_mode()
+
     def merge_with_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
         # Writes stolen childrens parent pointer, nothing else
+
+        get_tracking_handler_instance().enter_merge_with_neighbor_mode()
 
         split_key_from_parent = parent_node.split_keys[parent_split_key_index]
 
@@ -351,10 +383,15 @@ class BPlusTreeNode(AbstractNode):
             stolen_child_node.parent_id = self.node_id
             write_node(stolen_child_node)
 
+        get_tracking_handler_instance().exit_merge_with_neighbor_mode()
+
 
 class Leaf(AbstractNode):
 
     def merge_with_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+
+        get_tracking_handler_instance().enter_merge_with_neighbor_mode()
+
         if is_left_neighbor:
             left_node = neighbor_node
             right_node = self
@@ -372,7 +409,12 @@ class Leaf(AbstractNode):
         del parent_node.children[neighbor_index_in_parent]
         del parent_node.split_keys[parent_split_key_index]
 
+        get_tracking_handler_instance().exit_merge_with_neighbor_mode()
+
     def steal_from_neighbor(self, parent_split_key_index, neighbor_node, parent_node, is_left_neighbor):
+
+        get_tracking_handler_instance().enter_steal_from_neighbor_mode()
+
         if is_left_neighbor:
             stolen_element = neighbor_node.children.pop(-1)
             self.children.insert(0, stolen_element)
@@ -383,6 +425,8 @@ class Leaf(AbstractNode):
             split_key_to_parent = stolen_element
 
         parent_node.split_keys[parent_split_key_index] = split_key_to_parent
+
+        get_tracking_handler_instance().exit_steal_from_neighbor_mode()
 
     def find_fitting_child_for_key(self, ele):
         raise NotImplementedError("Shouldn't need this method on a Leaf Node....")
@@ -411,6 +455,9 @@ class Leaf(AbstractNode):
 
 
 def load_node(node_id, is_leaf) -> BPlusTreeNode | Leaf:
+
+    # Tracking happens in sub-call
+
     if is_leaf:
         return load_leaf(node_id)
     else:
@@ -418,6 +465,9 @@ def load_node(node_id, is_leaf) -> BPlusTreeNode | Leaf:
 
 
 def load_node_non_leaf(node_id) -> BPlusTreeNode:
+
+    get_tracking_handler_instance().enter_node_read_sub_mode()
+
     if node_id is None:
         raise ValueError("Tried loading node, but node_id was not provided (is None)")
 
@@ -448,10 +498,15 @@ def load_node_non_leaf(node_id) -> BPlusTreeNode:
                                   children=children,
                                   parent_id=parent_id)
 
+    get_tracking_handler_instance().exit_node_read_sub_mode(1)
+
     return node_instance
 
 
 def load_leaf(node_id) -> Leaf:
+
+    get_tracking_handler_instance().enter_leaf_element_read_sub_mode()
+
     leaf_file_path = get_file_path_for_node_id(node_id)
 
     # The line splitting [:-1] gets rid of the line break
@@ -463,6 +518,8 @@ def load_leaf(node_id) -> Leaf:
         parent_id = None
 
     leaf_instance = Leaf(node_id=node_id, parent_id=parent_id, children=elements)
+
+    get_tracking_handler_instance().exit_leaf_element_read_sub_mode(len(leaf_instance.children))
 
     return leaf_instance
 
@@ -477,6 +534,8 @@ def write_node(node: AbstractNode):
 
 
 def write_leaf(leaf):
+    get_tracking_handler_instance().enter_leaf_element_write_sub_mode()
+
     file_path = get_file_path_for_node_id(leaf.node_id)
 
     with open(file_path, 'w') as f:
@@ -484,8 +543,12 @@ def write_leaf(leaf):
         for ele in leaf.children:
             f.write(f'{ele}\n')
 
+    get_tracking_handler_instance().exit_leaf_element_write_sub_mode(len(leaf.children))
+
 
 def write_node_non_leaf(node: BPlusTreeNode):
+    get_tracking_handler_instance().enter_node_write_sub_mode()
+
     raw_list = [node.node_type.value, len(node.split_keys), *node.split_keys, len(node.children), *node.children, node.parent_id]
     str_list = [str(elem) for elem in raw_list]
     output_string = SEP.join(str_list)
@@ -494,3 +557,13 @@ def write_node_non_leaf(node: BPlusTreeNode):
 
     with open(file_path, 'w') as f:
         f.write(output_string)
+
+    get_tracking_handler_instance().exit_node_write_sub_mode(1)
+
+
+def get_tree_instance() -> BPlusTree:
+    return BPlusTree.tree_instance
+
+
+def get_tracking_handler_instance() -> TreeTrackingHandler:
+    return get_tree_instance().tracking_handler
