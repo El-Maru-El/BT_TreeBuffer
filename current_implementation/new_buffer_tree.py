@@ -141,7 +141,7 @@ class BufferTree:
             loaded_neighbor = load_node(some_neighbor_id)
             return loaded_parent_node, loaded_neighbor, is_left
 
-        self.tracking_handler.enter_leaf_with_dummy_children_mode()
+        self.tracking_handler.enter_rebalance_mode()
         # If there are nodes with too few children -> Handle those first
         # If there are leaf nodes with dummy children -> Delete dummy until it has too few children
         while not self.leaf_nodes_with_dummy_children.is_empty() or self.node_to_steal_or_merge_queue:
@@ -172,7 +172,7 @@ class BufferTree:
                 leaf_node.delete_dummy_blocks_from_leaf_node_until_too_few_children()
                 write_node(leaf_node)
 
-        self.tracking_handler.exit_leaf_with_dummy_children_mode()
+        self.tracking_handler.exit_rebalance_mode()
 
 
 class TreeNode:

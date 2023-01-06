@@ -9,25 +9,9 @@ MODE_STRING = "mode"
 @unique
 class TrackingModeEnum(str, Enum):
     # For both trees:
+    NODE_SPLITTING = "node_split"
     DEFAULT = 'The_complete_tree'
     ROOT_DELETION = 'root_deletion'
-
-    # For buffer tree only:
-    TREE_BUFFER_FULL = "internal_buffer_to_root_buffer"
-    DUMMY_CHILDREN = "delete_dummy_children"
-    EXTERNAL_MERGE_SORT_BUFFER = 'sort_external_buffer_elements'
-    MERGE_BUFFER_WITH_LEAF = 'merge_sort_buffer_with_leafs'
-
-    # For what are the IO-Calls required?
-    INSERT = 'insert_to_tree'
-    DELETE = 'delete_from_tree'
-
-    FLUSH_ALL_BUFFERS = "flush_buffers"
-
-    INTERNAL_BUFFER_EMPTYING = "internal_buffer_emptying"
-    LEAF_BUFFER_EMPTYING = "leaf_buffer_emptying"
-
-    NODE_SPLITTING = "node_split"
 
     BUFFER_SORTING = "buffer_external_merge_sort"
     COMBINE_BUFFER_AND_LEAFS = "merge_sorted_buffer_with_leaf_blocks"
@@ -35,8 +19,23 @@ class TrackingModeEnum(str, Enum):
     NODE_MERGE = "node_merge"
     NODE_STEAL = "node_steal"
 
-    # BPlusTree Specific:
-    INTERNAL_NODE_READ = "read_internal_node"
+    REBALANCING = "rebalance"
+
+    # For buffer tree only:
+    TREE_BUFFER_FULL = "internal_buffer_to_root_buffer"
+    DUMMY_CHILDREN = "delete_dummy_children"
+    EXTERNAL_MERGE_SORT_BUFFER = 'sort_external_buffer_elements'
+    MERGE_BUFFER_WITH_LEAF = 'merge_sort_buffer_with_leafs'
+
+    FLUSH_ALL_BUFFERS = "flush_buffers"
+
+    INTERNAL_BUFFER_EMPTYING = "internal_buffer_emptying"
+    LEAF_BUFFER_EMPTYING = "leaf_buffer_emptying"
+
+    # BPlus Tree Specific modes
+    INSERT = 'insert_to_tree'
+    DELETE = 'delete_from_tree'
+    FIND_LEAF = 'find_leaf'
 
     # Sub-modes for IOCalls writing and reading
     NODE_READ = "node_read"
@@ -246,11 +245,11 @@ class TreeTrackingHandler:
     def exit_leaf_buffer_emptying_mode(self):
         self._exit_mode(TrackingModeEnum.LEAF_BUFFER_EMPTYING)
 
-    def enter_leaf_with_dummy_children_mode(self):
-        self._enter_mode(TrackingModeEnum.DUMMY_CHILDREN)
+    def enter_rebalance_mode(self):
+        self._enter_mode(TrackingModeEnum.REBALANCING)
 
-    def exit_leaf_with_dummy_children_mode(self):
-        self._exit_mode(TrackingModeEnum.DUMMY_CHILDREN)
+    def exit_rebalance_mode(self):
+        self._exit_mode(TrackingModeEnum.REBALANCING)
 
     def enter_root_node_deletion_mode(self):
         self._enter_mode(TrackingModeEnum.ROOT_DELETION)
@@ -269,6 +268,25 @@ class TreeTrackingHandler:
 
     def exit_merge_leaf_with_buffer_mode(self):
         self._exit_mode(TrackingModeEnum.MERGE_BUFFER_WITH_LEAF)
+
+    # BPlus Tree specific main modes
+    def enter_insert_to_tree_mode(self):
+        self._enter_mode(TrackingModeEnum.INSERT)
+
+    def exit_insert_to_tree_mode(self):
+        self._exit_mode(TrackingModeEnum.INSERT)
+
+    def enter_delete_from_tree_mode(self):
+        self._enter_mode(TrackingModeEnum.DELETE)
+
+    def exit_delete_from_tree_mode(self):
+        self._exit_mode(TrackingModeEnum.DELETE)
+
+    def enter_find_leaf_mode(self):
+        self._enter_mode(TrackingModeEnum.FIND_LEAF)
+
+    def exit_find_leaf_mode(self):
+        self._exit_mode(TrackingModeEnum.FIND_LEAF)
 
     # Methods for entering/exiting sub-mode for IO calls and counting them:
     def _exit_sub_mode(self, mode, counter):
@@ -310,3 +328,4 @@ class TreeTrackingHandler:
 
     def exit_leaf_element_write_sub_mode(self, counter):
         self._exit_sub_mode(TrackingModeEnum.LEAF_ELEMENT_WRITE, counter)
+
