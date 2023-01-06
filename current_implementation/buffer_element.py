@@ -1,6 +1,7 @@
 from collections import deque
 from enum import unique, Enum
 from current_implementation.constants_and_helpers import get_current_timer_as_float, SEP
+import current_implementation.new_buffer_tree as bt
 
 
 class BufferElement:
@@ -35,12 +36,16 @@ def get_buffer_elements_from_sorted_filereader_into_deque(file_reader, max_lines
     if not max_lines:
         raise ValueError(f"sorted_filereader was instructed to read {max_lines}. This doesn't work")
 
+    bt.get_tracking_handler_instance().enter_buffer_element_read_sub_mode()
+
     lines = deque()
     for line in file_reader:
         lines.append(parse_line_into_buffer_element(line))
         max_lines -= 1
         if not max_lines:
             break
+
+    bt.get_tracking_handler_instance().exit_buffer_element_read_sub_mode(len(lines))
 
     if not lines:
         return None
