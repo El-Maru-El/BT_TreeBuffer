@@ -979,13 +979,17 @@ class NodeBufferBlock:
 
 
 # Node structure ideas:
-# is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block, parent_id
+# is_internal_node, num_handles, *handles, num_children, *paths_to_children, num_buffer_blocks, *paths_to_buffer_blocks, size_of_last_buffer_block
+# next line: parent_id (with line break)
 def load_node(node_id) -> TreeNode:
+
     if node_id is None:
         raise ValueError("Tried loading node, but node_id was not provided (is None)")
 
     raw_data = load_node_raw(node_id)
-    data = raw_data.split(SEP)
+    rows = raw_data.split('\n')
+
+    data = rows[0].split(SEP)
 
     if data[0] == TRUE_STRING:
         is_internal_node = True
@@ -1008,7 +1012,7 @@ def load_node(node_id) -> TreeNode:
     last_buffer_size = int(data[index])
     index += 1
 
-    parent_id = data[index]
+    parent_id = rows[1]
     if parent_id == 'None':
         parent_id = None
     index += 1
@@ -1045,15 +1049,18 @@ def write_node(node: TreeNode):
     else:
         is_internal_string = FALSE_STRING
 
-    raw_list = [is_internal_string, len(node.handles), *node.handles, len(node.children_ids), *node.children_ids, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size, node.parent_id]
-    str_list = [str(elem) for elem in raw_list]
+    first_line_raw = [is_internal_string, len(node.handles), *node.handles, len(node.children_ids), *node.children_ids, len(node.buffer_block_ids), *node.buffer_block_ids, node.last_buffer_size]
+    first_line_str = [str(elem) for elem in first_line_raw]
+    # Second line will just be parent_id
 
-    output_string = SEP.join(str_list)
+    first_line_output_string = SEP.join(first_line_str)
 
     file_path = node_information_file_path_from_id(node.node_id)
 
     with open(file_path, 'w') as f:
-        f.write(output_string)
+        f.write(first_line_output_string)
+        f.write('\n')
+        f.write(f'{node.parent_id}\n')
 
     get_tracking_handler_instance().exit_node_write_sub_mode(1)
 
@@ -1146,4 +1153,9 @@ def get_tree_instance() -> BufferTree:
 
 
 def get_tracking_handler_instance() -> TreeTrackingHandler:
-    return get_tree_instance().tracking_handler
+    # Kinda fails for some unit tests where no tree, but only nodes are created... So let's return a dummy TrackingHandler, without a tree, tracker isn't enabled anyways
+    tree = get_tree_instance()
+    if tree is None:
+        return TreeTrackingHandler()
+    else:
+        return get_tree_instance().tracking_handler
