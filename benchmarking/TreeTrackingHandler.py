@@ -13,9 +13,6 @@ class TrackingModeEnum(str, Enum):
     DEFAULT = 'The_complete_tree'
     ROOT_DELETION = 'root_deletion'
 
-    BUFFER_SORTING = "buffer_external_merge_sort"
-    COMBINE_BUFFER_AND_LEAFS = "merge_sorted_buffer_with_leaf_blocks"
-
     NODE_MERGE = "node_merge"
     NODE_STEAL = "node_steal"
 
@@ -23,7 +20,6 @@ class TrackingModeEnum(str, Enum):
 
     # For buffer tree only:
     TREE_BUFFER_FULL = "internal_buffer_to_root_buffer"
-    DUMMY_CHILDREN = "delete_dummy_children"
     EXTERNAL_MERGE_SORT_BUFFER = 'sort_external_buffer_elements'
     MERGE_BUFFER_WITH_LEAF = 'merge_sort_buffer_with_leafs'
 
