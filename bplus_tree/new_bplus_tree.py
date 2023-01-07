@@ -310,9 +310,11 @@ class BPlusTreeNode(AbstractNode):
         # Since we are not a leaf, all children have to adapt their parent pointer
 
         for child_id in new_left_neighbor_node.children:
-            moved_child_node = load_node(child_id, is_leaf=self.children_are_leaves())
-            moved_child_node.parent_id = new_left_neighbor_node.node_id
-            write_node(moved_child_node)
+            # TODO Debug point 1
+            overwrite_parent_id(child_id, new_left_neighbor_node.node_id)
+            # moved_child_node = load_node(child_id, is_leaf=self.children_are_leaves())
+            # moved_child_node.parent_id = new_left_neighbor_node.node_id
+            # write_node(moved_child_node)
 
         write_node(new_left_neighbor_node)
         return new_left_neighbor_node, split_key_to_parent
@@ -345,10 +347,11 @@ class BPlusTreeNode(AbstractNode):
 
         parent_node.split_keys[parent_split_key_index] = split_key_to_parent
 
-        # TODO Overwrite parent pointers only
-        stolen_child_node = load_node(stolen_child, is_leaf=self.is_leaf_node())
-        stolen_child_node.parent_id = self.node_id
-        write_node(stolen_child_node)
+        # TODO Debug point 2
+        overwrite_parent_id(stolen_child, self.node_id)
+        # stolen_child_node = load_node(stolen_child, is_leaf=self.is_leaf_node())
+        # stolen_child_node.parent_id = self.node_id
+        # write_node(stolen_child_node)
 
         get_tracking_handler_instance().exit_steal_from_neighbor_mode()
 
@@ -379,9 +382,10 @@ class BPlusTreeNode(AbstractNode):
 
         # TODO: Overwrite parent pointer only
         for stolen_child_node_id in neighbor_node.children:
-            stolen_child_node = load_node(stolen_child_node_id, is_leaf=self.is_leaf_node())
-            stolen_child_node.parent_id = self.node_id
-            write_node(stolen_child_node)
+            overwrite_parent_id(stolen_child_node_id, self.node_id)
+            # stolen_child_node = load_node(stolen_child_node_id, is_leaf=self.is_leaf_node())
+            # stolen_child_node.parent_id = self.node_id
+            # write_node(stolen_child_node)
 
         get_tracking_handler_instance().exit_merge_with_neighbor_mode()
 
@@ -474,23 +478,24 @@ def load_node_non_leaf(node_id) -> BPlusTreeNode:
     file_path = get_file_path_for_node_id(node_id)
 
     with open(file_path, 'r') as f:
-        data = f.read().split(SEP)
+        data = f.read().split('\n')
 
-    node_type = NodeType(data[0])
+    first_line = data[0].split(SEP)
+    parent_id = data[1]
 
-    num_handles = int(data[1])
+    node_type = NodeType(first_line[0])
+
+    num_handles = int(first_line[1])
     index = 2
-    split_keys = data[index:index + num_handles]
+    split_keys = first_line[index:index + num_handles]
     index += num_handles
 
-    num_children = int(data[index])
-    children = data[index + 1: index + 1 + num_children]
+    num_children = int(first_line[index])
+    children = first_line[index + 1: index + 1 + num_children]
     index += 1 + num_children
 
-    parent_id = data[index]
     if parent_id == 'None':
         parent_id = None
-    index += 1
 
     node_instance = BPlusTreeNode(node_type=node_type,
                                   node_id=node_id,
@@ -511,8 +516,8 @@ def load_leaf(node_id) -> Leaf:
 
     # The line splitting [:-1] gets rid of the line break
     with open(leaf_file_path, 'r') as f:
-        parent_id = f.readline()[:-1]
         elements = [line[:-1] for line in f]
+        parent_id = elements.pop(-1)
 
     if parent_id == 'None':
         parent_id = None
@@ -522,6 +527,25 @@ def load_leaf(node_id) -> Leaf:
     get_tracking_handler_instance().exit_leaf_element_read_sub_mode(len(leaf_instance.children))
 
     return leaf_instance
+
+
+def overwrite_parent_id(child_id, new_parent_id):
+    file_path = get_file_path_for_node_id(child_id)
+
+    get_tracking_handler_instance().enter_overwrite_parent_id_sub_mode()
+
+    with open(file_path, "rb+") as f:
+        try:
+            f.seek(-2, os.SEEK_END)
+            while f.read(1) != b'\n':
+                f.seek(-2, os.SEEK_CUR)
+        except OSError as e:
+            raise IOError(f"Couldn't find last line in file {file_path}") from e
+
+        f.write(f'{new_parent_id}\n'.encode())
+        f.truncate()
+
+    get_tracking_handler_instance().exit_overwrite_parent_id_sub_mode(1)
 
 
 def write_node(node: AbstractNode):
@@ -539,9 +563,9 @@ def write_leaf(leaf):
     file_path = get_file_path_for_node_id(leaf.node_id)
 
     with open(file_path, 'w') as f:
-        f.write(f'{leaf.parent_id}\n')
         for ele in leaf.children:
             f.write(f'{ele}\n')
+        f.write(f'{leaf.parent_id}\n')
 
     get_tracking_handler_instance().exit_leaf_element_write_sub_mode(len(leaf.children))
 
@@ -549,14 +573,17 @@ def write_leaf(leaf):
 def write_node_non_leaf(node: BPlusTreeNode):
     get_tracking_handler_instance().enter_node_write_sub_mode()
 
-    raw_list = [node.node_type.value, len(node.split_keys), *node.split_keys, len(node.children), *node.children, node.parent_id]
-    str_list = [str(elem) for elem in raw_list]
-    output_string = SEP.join(str_list)
+    first_line_raw = [node.node_type.value, len(node.split_keys), *node.split_keys, len(node.children), *node.children]
+    first_line_str = [str(elem) for elem in first_line_raw]
+
+    first_line_output_string = SEP.join(first_line_str)
 
     file_path = get_file_path_for_node_id(node.node_id)
 
     with open(file_path, 'w') as f:
-        f.write(output_string)
+        f.write(first_line_output_string)
+        f.write('\n')
+        f.write(f'{node.parent_id}\n')
 
     get_tracking_handler_instance().exit_node_write_sub_mode(1)
 
@@ -566,4 +593,9 @@ def get_tree_instance() -> BPlusTree:
 
 
 def get_tracking_handler_instance() -> TreeTrackingHandler:
-    return get_tree_instance().tracking_handler
+    # Kinda fails for some unit tests where no tree, but only nodes are created... So let's return a dummy TrackingHandler, without a tree, tracker isn't enabled anyways
+    tree = get_tree_instance()
+    if tree is None:
+        return TreeTrackingHandler()
+    else:
+        return get_tree_instance().tracking_handler

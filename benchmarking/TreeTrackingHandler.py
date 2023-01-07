@@ -17,6 +17,7 @@ class TrackingModeEnum(str, Enum):
     NODE_STEAL = "node_steal"
 
     REBALANCING = "rebalance"
+    OVERWRITE_PARENT = 'overwrite_parent_pointer'
 
     # For buffer tree only:
     TREE_BUFFER_FULL = "internal_buffer_to_root_buffer"
@@ -325,3 +326,8 @@ class TreeTrackingHandler:
     def exit_leaf_element_write_sub_mode(self, counter):
         self._exit_sub_mode(TrackingModeEnum.LEAF_ELEMENT_WRITE, counter)
 
+    def enter_overwrite_parent_id_sub_mode(self):
+        self._enter_mode(TrackingModeEnum.OVERWRITE_PARENT)
+
+    def exit_overwrite_parent_id_sub_mode(self, counter):
+        self._exit_sub_mode(TrackingModeEnum.OVERWRITE_PARENT, counter)
