@@ -444,9 +444,7 @@ class TreeNode:
                 if loaded_child_node and loaded_child_node.node_id == passed_child_id:
                     loaded_child_node.parent_id = new_left_neighbor_node.node_id
                 else:
-                    passed_child_node = load_node(passed_child_id)
-                    passed_child_node.parent_id = new_left_neighbor_node.node_id
-                    write_node(passed_child_node)
+                    overwrite_parent_id(passed_child_id, new_left_neighbor_node.node_id)
 
     def index_for_child_id(self, find_id):
         return self.children_ids.index(find_id)
@@ -488,7 +486,6 @@ class TreeNode:
             consumed_child_counter = 0
 
             old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
-            # TODO Maru: How to get those tracked?
             sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
 
             new_leaf_block_elements = []
@@ -738,9 +735,7 @@ class TreeNode:
         # Overwrite the parent-pointer of all the children to be stolen (invariant makes sure there are no DUMMY children)
         if neighbor_node.is_internal_node():
             for child_id in neighbor_node.children_ids:
-                stolen_child = load_node(child_id)
-                stolen_child.parent_id = self.node_id
-                write_node(stolen_child)
+                overwrite_parent_id(child_id, self.node_id)
 
         if is_left_neighbor:
             left_node = neighbor_node
@@ -860,9 +855,7 @@ class TreeNode:
         if self.is_internal_node():
             for stolen_node_id in stolen_children:
                 if stolen_node_id != DUMMY_STRING:
-                    stolen_child_node = load_node(stolen_node_id)
-                    stolen_child_node.parent_id = self.node_id
-                    write_node(stolen_child_node)
+                    overwrite_parent_id(stolen_node_id, self.node_id)
 
         # If we still have dummy children, calling method has to take care of that
 
@@ -925,9 +918,7 @@ class TreeNode:
         if len(self.children_ids) != 1:
             raise ValueError(f"Root node {self.node_id} has been marked for deletion, but does not have exactly one child.\nChildren ids: {self.children_ids}")
 
-        loaded_child_node = load_node(self.children_ids[0])
-        loaded_child_node.parent_id = None
-        write_node(loaded_child_node)
+        overwrite_parent_id(self.children_ids[0], None)
 
         tree.root_node_id = self.children_ids[0]
         delete_node_from_ext_memory(self.node_id)
@@ -1150,6 +1141,25 @@ def write_leaf_block(leaf_id, elements):
 
 def get_tree_instance() -> BufferTree:
     return BufferTree.tree_instance
+
+
+def overwrite_parent_id(child_id, new_parent_id):
+    file_path = node_information_file_path_from_id(child_id)
+
+    get_tracking_handler_instance().enter_overwrite_parent_id_sub_mode()
+
+    with open(file_path, "rb+") as f:
+        try:
+            f.seek(-2, os.SEEK_END)
+            while f.read(1) != b'\n':
+                f.seek(-2, os.SEEK_CUR)
+        except OSError as e:
+            raise IOError(f"Couldn't find last line in file {file_path}") from e
+
+        f.write(f'{new_parent_id}\n'.encode())
+        f.truncate()
+
+    get_tracking_handler_instance().exit_overwrite_parent_id_sub_mode(1)
 
 
 def get_tracking_handler_instance() -> TreeTrackingHandler:
