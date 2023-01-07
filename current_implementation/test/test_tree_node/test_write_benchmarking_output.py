@@ -57,6 +57,7 @@ class BigTestsWithTracking(unittest.TestCase):
         self.assertFalse(root_node.is_internal_node())
         tree.stop_tracking_handler()
 
+    # @unittest.skip("Kinda takes long when I make inbetween checks")
     def test_big_big_big_big_big_tree(self):
         tree = self.create_dummy_tree()
         biggest_int = 200 * tree.B * tree.m
