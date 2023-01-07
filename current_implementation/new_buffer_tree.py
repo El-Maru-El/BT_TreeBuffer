@@ -47,8 +47,8 @@ class BufferTree:
     def start_tracking_handler(self):
         self.tracking_handler.start_tracking()
 
-    def stop_tracking_handler(self):
-        self.tracking_handler.stop_tracking()
+    def stop_tracking_handler(self, benchmark_name=None):
+        self.tracking_handler.stop_tracking(is_buffer_tree=True, benchmark_name=benchmark_name)
 
     @staticmethod
     def calculate_s(a, b):
