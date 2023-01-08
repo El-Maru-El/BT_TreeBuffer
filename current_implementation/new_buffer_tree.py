@@ -558,7 +558,7 @@ class TreeNode:
         get_tracking_handler_instance().exit_merge_leaf_with_buffer_mode()
 
     def prepare_buffer_blocks_into_manageable_sorted_files(self):
-        # Is read size m - 1 good? Assume up to 1 block worth of elements for other requirements to internal memory (queues, over-head and so on...)
+        # TODO Is read size m - 1 good? Assume up to 1 block worth of elements for other requirements to internal memory (queues, over-head for buffer elements, and so on...)
 
         read_size = get_tree_instance().m - 1
 
