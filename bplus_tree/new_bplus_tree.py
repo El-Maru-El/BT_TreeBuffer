@@ -80,29 +80,21 @@ class BPlusTree:
 
     tree_instance = None
 
-    def __init__(self, order, min_leaf_size=None, max_leaf_size=None):
+    def __init__(self, order, max_leaf_size=None):
         clean_up_and_initialize_resource_directories()
-
-        if None in [min_leaf_size, max_leaf_size] and min_leaf_size != max_leaf_size:
-            raise ValueError("If providing lower or upper bound for leaf size, BOTH have to be provided")
 
         BPlusTree.tree_instance = self
         self.b = order
         self.a = math.ceil(order / 2)
 
-        if min_leaf_size is None:
-            min_leaf_size = self.a
+        if max_leaf_size is None:
             max_leaf_size = self.b
 
-        if max_leaf_size < 2 * min_leaf_size - 1:
-            raise ValueError(f"Max leaf size ({max_leaf_size} must be at least twice as big as min leaf size ({min_leaf_size})")
-
-        self.min_leaf_size = min_leaf_size
         self.max_leaf_size = max_leaf_size
+        self.min_leaf_size = math.ceil(max_leaf_size / 2)
 
         # Starts as disabled, must be enabled. If disabled and calls are made to the tracking Handler, the tracking Handler won't do anything
         self.tracking_handler = TreeTrackingHandler()
-        # TODO Check up in the end: Do we always update it?
         self.root_node_type = NodeType.LEAF
 
         root_node = self.create_root_leaf()
@@ -124,7 +116,7 @@ class BPlusTree:
     def insert_to_tree(self, ele):
         self.tracking_handler.enter_insert_to_tree_mode()
 
-        root_node = load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
+        root_node = self.load_root()
         leaf = self.find_leaf_for_element_iteratively(root_node, ele)
         leaf.leaf_insert_key_value(ele)
         if len(leaf.children) > self.b:
@@ -310,11 +302,7 @@ class BPlusTreeNode(AbstractNode):
         # Since we are not a leaf, all children have to adapt their parent pointer
 
         for child_id in new_left_neighbor_node.children:
-            # TODO Debug point 1
             overwrite_parent_id(child_id, new_left_neighbor_node.node_id)
-            # moved_child_node = load_node(child_id, is_leaf=self.children_are_leaves())
-            # moved_child_node.parent_id = new_left_neighbor_node.node_id
-            # write_node(moved_child_node)
 
         write_node(new_left_neighbor_node)
         return new_left_neighbor_node, split_key_to_parent
@@ -347,11 +335,7 @@ class BPlusTreeNode(AbstractNode):
 
         parent_node.split_keys[parent_split_key_index] = split_key_to_parent
 
-        # TODO Debug point 2
         overwrite_parent_id(stolen_child, self.node_id)
-        # stolen_child_node = load_node(stolen_child, is_leaf=self.is_leaf_node())
-        # stolen_child_node.parent_id = self.node_id
-        # write_node(stolen_child_node)
 
         get_tracking_handler_instance().exit_steal_from_neighbor_mode()
 
@@ -380,12 +364,8 @@ class BPlusTreeNode(AbstractNode):
         del parent_node.children[neighbor_index_in_parent]
         del parent_node.split_keys[parent_split_key_index]
 
-        # TODO: Overwrite parent pointer only
         for stolen_child_node_id in neighbor_node.children:
             overwrite_parent_id(stolen_child_node_id, self.node_id)
-            # stolen_child_node = load_node(stolen_child_node_id, is_leaf=self.is_leaf_node())
-            # stolen_child_node.parent_id = self.node_id
-            # write_node(stolen_child_node)
 
         get_tracking_handler_instance().exit_merge_with_neighbor_mode()
 

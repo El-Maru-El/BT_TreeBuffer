@@ -25,7 +25,7 @@ class TrackingModeEnum(str, Enum):
     NODE_STEAL = "node_steal"
 
     REBALANCING = "rebalance"
-    OVERWRITE_PARENT = 'overwrite_parent_pointer'
+    OVERWRITE_PARENT = 'IO_overwrite_parent_pointer'
 
     # For buffer tree only:
     TREE_BUFFER_FULL = "internal_buffer_to_root_buffer"

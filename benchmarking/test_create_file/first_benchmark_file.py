@@ -65,6 +65,5 @@ class BigTestsWithTracking(unittest.TestCase):
     @staticmethod
     def create_bplus_tree():
         order = 8
-        min_leaf_size = 512
         max_leaf_size = 1024
-        return BPlusTree(order=order, min_leaf_size=min_leaf_size, max_leaf_size=max_leaf_size)
+        return BPlusTree(order=order, max_leaf_size=max_leaf_size)
