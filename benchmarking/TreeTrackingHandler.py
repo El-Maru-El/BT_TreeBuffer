@@ -1,9 +1,17 @@
 from enum import Enum, unique
+from datetime import datetime
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
+import os
+from pathlib import Path
+import benchmarking
+
 
 MODE_STRING = "mode"
+BENCHMARKING_DIR = os.path.dirname(benchmarking.__file__)
+OUTPUT_DIR = os.path.join(BENCHMARKING_DIR, "benchmarks")
+SEPARATION_LINE = "#" * 90
 
 
 @unique
@@ -35,14 +43,14 @@ class TrackingModeEnum(str, Enum):
     FIND_LEAF = 'find_leaf'
 
     # Sub-modes for IOCalls writing and reading
-    NODE_READ = "node_read"
-    NODE_WRITE = "node_write"
+    NODE_READ = "IO_node_read"
+    NODE_WRITE = "IO_node_write"
 
-    BUFFER_ELEMENT_READ = "read_buffer"
-    BUFFER_ELEMENT_WRITE = "buffer_write"
+    BUFFER_ELEMENT_READ = "IO_buffer_elem_read"
+    BUFFER_ELEMENT_WRITE = "IO_buffer_elem_write"
 
-    LEAF_ELEMENT_READ = "leaf_elem_read"
-    LEAF_ELEMENT_WRITE = "leaf_elem_write"
+    LEAF_ELEMENT_READ = "IO_leaf_elem_read"
+    LEAF_ELEMENT_WRITE = "IO_leaf_elem_write"
 
 
 @dataclass
@@ -84,7 +92,7 @@ class ModeTracker:
         return "\t".join(strings)
 
     def __str__(self):
-        return f"{self.mode.value} ->\tTime: {self.tracking_time}s\t{self._io_calls_string()}"
+        return f"{self.mode.value} ->\tTime: {str(self.tracking_time).replace('.', ',')}s\t{self._io_calls_string()}"
 
 
 class TreeTrackingHandler:
@@ -143,12 +151,12 @@ class TreeTrackingHandler:
         self.enabled = True
         self._enter_mode(TrackingModeEnum.DEFAULT)
 
-    def stop_tracking(self):
+    def stop_tracking(self, is_buffer_tree, benchmark_name=None):
         # Don't turn enabled off, it shouldn't be turned back on anyways
         if not self.enabled:
             raise ValueError("Tried exiting benchmarking tracker, but it's never been enabled????")
         self._exit_mode(TrackingModeEnum.DEFAULT)
-        self._generate_output()
+        self._generate_output(is_buffer_tree, benchmark_name)
 
     def _add_io_calls(self, io_call: "TrackingModeEnum", counter):
         if not self.enabled:
@@ -170,23 +178,44 @@ class TreeTrackingHandler:
 
         return current_mode_dict_in_nested_dict[mode]
 
-    def _generate_output(self):
-        # TODO: Methods for outputting (how? txt? log file? + what exactly do I write?)
-
-        print("Total benchmarks:")
-        for mode, mode_tracker in self.total_benchmarks.items():
+    def _generate_output(self, is_buffer_tree, benchmark_name):
+        total_benchmark_strings = ["Total benchmarks:"]
+        sorted_by_mode_alphabetically = sorted(list(self.total_benchmarks.keys()))
+        for mode in sorted_by_mode_alphabetically:
+            mode_tracker = self.total_benchmarks[mode]
             mode_tracker.mode = mode
-            print(mode_tracker.__str__())
-        print("#" * 90)
-        print("#" * 90)
-        print("Nested benchmarks:")
-        for sub_string in self._nested_benchmarks_as_string_list():
-            print(sub_string)
+            total_benchmark_strings.append(mode_tracker.__str__())
+        total_benchmark_strings.append(SEPARATION_LINE)
+        total_benchmark_strings.append(SEPARATION_LINE)
+
+        nested_benchmark_strings = self._nested_benchmarks_as_string_list()
+        if benchmark_name:
+            file_path = get_timestamped_benchmark_file_path(is_buffer_tree, benchmark_name)
+            self.create_out_put_file(file_path, total_benchmark_strings, nested_benchmark_strings)
+        else:
+            # Just print everything to console
+            for sub_string in total_benchmark_strings:
+                print(sub_string)
+
+            for sub_string in nested_benchmark_strings:
+                print(sub_string)
+
+    @staticmethod
+    def create_out_put_file(file_path, total_benchmark_strings, nested_benchmark_strings):
+        directory = Path(os.path.dirname(file_path))
+        directory.mkdir(parents=True, exist_ok=True)
+
+        with open(file_path, 'w') as f:
+            for sub_string in total_benchmark_strings:
+                f.write(f'{sub_string}\n')
+
+            for sub_string in nested_benchmark_strings:
+                f.write(f'{sub_string}\n')
 
     def _nested_benchmarks_as_string_list(self):
         if len(self.nested_benchmarks.keys()) != 1:
             raise ValueError("Trying to generate output, but nested benchmarks dict has been set incorrectly?")
-        string_list = []
+        string_list = ["Nested benchmark strings:"]
 
         self.dfs_recurse_through_nested_dicts(self.nested_benchmarks[TrackingModeEnum.DEFAULT], string_list, 0)
         return string_list
@@ -331,3 +360,13 @@ class TreeTrackingHandler:
 
     def exit_overwrite_parent_id_sub_mode(self, counter):
         self._exit_sub_mode(TrackingModeEnum.OVERWRITE_PARENT, counter)
+
+
+def get_timestamped_benchmark_file_path(is_buffer_tree, benchmark_name):
+    current_timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+    if is_buffer_tree:
+        tree_dir = 'buffer_tree'
+    else:
+        tree_dir = 'bplus_tree'
+    file_path = os.path.join(OUTPUT_DIR, benchmark_name, tree_dir, f'{current_timestamp}.txt')
+    return file_path
