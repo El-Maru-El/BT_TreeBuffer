@@ -38,8 +38,7 @@ class BigTestsWithTracking(unittest.TestCase):
         buffer_tree = self.create_buffer_tree()
         b_plus_tree = self.create_bplus_tree()
 
-        # trees = [buffer_tree, b_plus_tree]
-        trees = [b_plus_tree]
+        trees = [buffer_tree, b_plus_tree]
 
         for tree in trees:
             tree.start_tracking_handler()
