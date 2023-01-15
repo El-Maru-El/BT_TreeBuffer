@@ -14,7 +14,7 @@ class TestNodeBuffer(unittest.TestCase):
         fake_node = TreeNode(is_internal_node=False)
         node_id = fake_node.node_id
 
-        biggest_int = tree.B // 2
+        biggest_int = tree.B_buffer // 2
 
         starting_buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in
                                     range(biggest_int)]
@@ -28,13 +28,13 @@ class TestNodeBuffer(unittest.TestCase):
 
     def test_add_elements_to_partially_filled_bufferblock(self):
         tree = self.create_dummy_tree()
-        B = tree.B
+        B = tree.B_buffer
 
         fake_node = TreeNode(is_internal_node=False)
         node_id = fake_node.node_id
 
-        biggest_int = int(1.5 * tree.B)
-        num_first_elements = tree.B // 2
+        biggest_int = int(1.5 * tree.B_buffer)
+        num_first_elements = tree.B_buffer // 2
         starting_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in
                              range(num_first_elements)]
         fake_node.add_elements_to_buffer(elements=starting_elements)
@@ -55,7 +55,7 @@ class TestNodeBuffer(unittest.TestCase):
 
     def test_perfectly_fill_two_node_buffer_blocks(self):
         tree = self.create_dummy_tree()
-        B = tree.B
+        B = tree.B_buffer
 
         fake_node = TreeNode(is_internal_node=False)
         node_id = fake_node.node_id
@@ -76,7 +76,7 @@ class TestNodeBuffer(unittest.TestCase):
 
     def test_perfectly_fill_node_buffer_block_in_two_steps(self):
         tree = self.create_dummy_tree()
-        B = tree.B
+        B = tree.B_buffer
 
         fake_node = TreeNode(is_internal_node=False)
         node_id = fake_node.node_id
@@ -94,7 +94,7 @@ class TestNodeBuffer(unittest.TestCase):
 
     def test_slightly_overfill_one_node_buffer_block(self):
         tree = self.create_dummy_tree()
-        B = tree.B
+        B = tree.B_buffer
 
         fake_node = TreeNode(is_internal_node=False)
         node_id = fake_node.node_id
@@ -140,4 +140,4 @@ class TestNodeBuffer(unittest.TestCase):
         M = 2 * 4096
         B = 1024
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)

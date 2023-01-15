@@ -40,4 +40,4 @@ class BufferFlushTest(unittest.TestCase):
         B = 1024
         # m = 8
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)

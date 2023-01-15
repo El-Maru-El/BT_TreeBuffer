@@ -13,11 +13,16 @@ class BufferTree:
     """ Static reference to the tree. Useful for when calculating something for a node requires tree properties."""
     tree_instance = None
 
-    def __init__(self, M, B):
+    def __init__(self, M, B_buffer, B_leaf=None):
         clean_up_and_initialize_resource_directories()
+        # If no two separate amount of elements per Buffer are passed, assume the same size for both
+        if B_leaf is None:
+            B_leaf = B_buffer
+
         self.M = M
-        self.B = B
-        m = M // B
+        self.B_buffer = B_buffer
+        self.B_leaf = B_leaf
+        m = M // B_buffer
         if m % 4 != 0:
             raise ValueError('m = lowerbound(M/B) is not dividable by four. '
                              'This is required to calculate a and b for the underlying a-b-tree Structure.')
@@ -29,8 +34,9 @@ class BufferTree:
 
         root_node = TreeNode(is_internal_node=False, handles=[], children=[], buffer_block_ids=[])
         self.root_node_id = root_node.node_id
-        self.tree_buffer = TreeBuffer(max_size=self.B)
+        self.tree_buffer = TreeBuffer(max_size=self.B_buffer)
         self.internal_node_buffer_emptying_queue = deque()
+        # TODO Do we even need the doublyLinkedList here? Unless we want to delete something from it
         self.leaf_node_buffer_emptying_queue = DoublyLinkedList()
         self.node_to_split_queue = deque()
         # No leaf node can be in this buffer emptying queue twice at the same time, since _all_ full Buffers get deleted before any steal/merges are performed. BUT: In case of merging with a neighbor node, the neighboring node has to be deleted from this list (if present in it)
@@ -43,7 +49,7 @@ class BufferTree:
         BufferTree.tree_instance = self
         write_node(root_node)
 
-    # Must be called from outside this script
+    # Must be executed from outside this script to start tracking/benchmarking
     def start_tracking_handler(self):
         self.tracking_handler.start_tracking()
 
@@ -108,6 +114,7 @@ class BufferTree:
         self.clear_full_internal_buffers(enforce_buffer_emptying_enabled)
         self.clear_full_leaf_buffers()
 
+    # TODO Rename: It is not ->full<- buffers if enforce mode is enabled
     def clear_full_internal_buffers(self, enforce_buffer_emptying_enabled):
         self.tracking_handler.enter_internal_buffer_emptying_mode()
         while self.internal_node_buffer_emptying_queue:
@@ -166,7 +173,7 @@ class BufferTree:
                     self.node_to_steal_or_merge_queue.popleft()
                     loaded_node.root_node_is_too_small()
             else:
-                # No more steal/merges to perform, so delete another dummy child
+                # No more steal/merges to perform, so delete another dummy child from some leaf node
                 leaf_node_id = self.leaf_nodes_with_dummy_children.pop_first()
                 leaf_node = load_node(leaf_node_id)
                 leaf_node.delete_dummy_blocks_from_leaf_node_until_too_few_children()
@@ -224,8 +231,8 @@ class TreeNode:
 
     def add_elements_to_buffer(self, elements):
         tree = get_tree_instance()
-        if self.buffer_block_ids and self.last_buffer_size < tree.B:
-            elements_to_add = min(len(elements), tree.B - self.last_buffer_size)
+        if self.buffer_block_ids and self.last_buffer_size < tree.B_buffer:
+            elements_to_add = min(len(elements), tree.B_buffer - self.last_buffer_size)
             append_to_buffer(self.node_id, self.buffer_block_ids[-1], elements[:elements_to_add])
             self.last_buffer_size += elements_to_add
             start_index = elements_to_add
@@ -233,7 +240,7 @@ class TreeNode:
             start_index = 0
 
         while start_index < len(elements):
-            elements_to_add = min(len(elements) - start_index, tree.B)
+            elements_to_add = min(len(elements) - start_index, tree.B_buffer)
             buffer_block_id = self.get_new_buffer_block_id()
             write_buffer_block(self.node_id, buffer_block_id, elements[start_index:start_index + elements_to_add])
             self.buffer_block_ids.append(buffer_block_id)
@@ -480,13 +487,13 @@ class TreeNode:
             write_leaf_block(new_leaf_id, new_leaf_block_elements)
             del new_leaf_block_elements[:]
 
-        block_size = get_tree_instance().B
+        leaf_block_size = get_tree_instance().B_leaf
 
         with open(sorted_filepath, 'r') as sorted_file_reader:
             consumed_child_counter = 0
 
             old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
-            sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
+            sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, leaf_block_size)
 
             new_leaf_block_elements = []
             new_split_keys = []
@@ -511,7 +518,7 @@ class TreeNode:
                             new_leaf_block_elements.append(buffer_element.element)
                         # Else it's a "delete" and element should not be appended
 
-                    if len(new_leaf_block_elements) == block_size:
+                    if len(new_leaf_block_elements) == leaf_block_size:
                         new_leaf()
 
                 if not old_leaf_block_elements:
@@ -519,13 +526,13 @@ class TreeNode:
                     old_leaf_block_elements = self.read_leaf_block_elements_as_deque(consumed_child_counter)
 
                 if not sorted_buffer_elements:
-                    sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
+                    sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, leaf_block_size)
 
             if old_leaf_block_elements:
                 while old_leaf_block_elements is not None:
                     new_leaf_block_elements.append(old_leaf_block_elements.popleft())
 
-                    if len(new_leaf_block_elements) == block_size:
+                    if len(new_leaf_block_elements) == leaf_block_size:
                         new_leaf()
 
                     if not old_leaf_block_elements:
@@ -538,11 +545,11 @@ class TreeNode:
                     if buffer_element.action == Action.INSERT:
                         new_leaf_block_elements.append(buffer_element.element)
 
-                    if len(new_leaf_block_elements) == block_size:
+                    if len(new_leaf_block_elements) == leaf_block_size:
                         new_leaf()
 
                     if not sorted_buffer_elements:
-                        sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, block_size)
+                        sorted_buffer_elements = get_buffer_elements_from_sorted_filereader_into_deque(sorted_file_reader, leaf_block_size)
 
             if new_leaf_block_elements:
                 new_leaf()
@@ -702,7 +709,7 @@ class TreeNode:
             delete_node_from_ext_memory(neighbor_node.node_id)
 
         else:
-            # Steal neighbor can't have dummy children, we take care of that with invariant
+            # Steal neighbor can't have dummy children, we take care of that with our own invariant
             self.steal_from_neighbor(parent_node, neighbor_node, is_left_neighbor)
 
             # Write neighbor

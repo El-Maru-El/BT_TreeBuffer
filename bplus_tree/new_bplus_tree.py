@@ -80,29 +80,23 @@ class BPlusTree:
 
     tree_instance = None
 
-    def __init__(self, order, min_leaf_size=None, max_leaf_size=None):
+    def __init__(self, order, max_leaf_size=None):
         clean_up_and_initialize_resource_directories()
-
-        if None in [min_leaf_size, max_leaf_size] and min_leaf_size != max_leaf_size:
-            raise ValueError("If providing lower or upper bound for leaf size, BOTH have to be provided")
 
         BPlusTree.tree_instance = self
         self.b = order
         self.a = math.ceil(order / 2)
 
-        if min_leaf_size is None:
-            min_leaf_size = self.a
+        # if no max_leaf_size is provided, it assumes the same amount of records for a leaf as a node is allowed to have children
+        if max_leaf_size is None:
             max_leaf_size = self.b
-
-        if max_leaf_size < 2 * min_leaf_size - 1:
-            raise ValueError(f"Max leaf size ({max_leaf_size} must be at least twice as big as min leaf size ({min_leaf_size})")
+        min_leaf_size = math.ceil(max_leaf_size / 2)
 
         self.min_leaf_size = min_leaf_size
         self.max_leaf_size = max_leaf_size
 
         # Starts as disabled, must be enabled. If disabled and calls are made to the tracking Handler, the tracking Handler won't do anything
         self.tracking_handler = TreeTrackingHandler()
-        # TODO Check up in the end: Do we always update it?
         self.root_node_type = NodeType.LEAF
 
         root_node = self.create_root_leaf()

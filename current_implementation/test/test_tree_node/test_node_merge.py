@@ -80,4 +80,4 @@ class TestTreeNodeSplit(unittest.TestCase):
         # t = 6
         # -> a + t + 1 = 11, with under 11 children on neighbor, we merge
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)

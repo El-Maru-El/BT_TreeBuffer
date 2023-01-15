@@ -117,7 +117,7 @@ class TestExternalMergeSort(unittest.TestCase):
         M = 2 * 4096
         B = 1024
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)
 
     def assert_ascending_buffer_elements(self, buffer_elements):
         last_element = None

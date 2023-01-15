@@ -11,7 +11,7 @@ class TestTreeBuffer(unittest.TestCase):
     def test_perfectly_filled_tree_buffer_one_block(self):
         tree = self.create_dummy_tree()
 
-        biggest_int = tree.B
+        biggest_int = tree.B_buffer
         elements_to_add = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
         for element in elements_to_add:
             tree.insert_to_tree(element)
@@ -28,7 +28,7 @@ class TestTreeBuffer(unittest.TestCase):
     def test_overfilled_tree_buffer_one_block(self):
         tree = self.create_dummy_tree()
 
-        biggest_int = int(1.5 * tree.B)
+        biggest_int = int(1.5 * tree.B_buffer)
         elements_to_add = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
         for element in elements_to_add:
             tree.insert_to_tree(element)
@@ -41,13 +41,13 @@ class TestTreeBuffer(unittest.TestCase):
 
         tree_buffer_elements_just_keys = [ele.element for ele in tree.tree_buffer.elements]
 
-        self.assertEqual(node_buffer_elements_just_keys, elements_to_add[:tree.B])
-        self.assertEqual(tree_buffer_elements_just_keys, elements_to_add[tree.B:])
+        self.assertEqual(node_buffer_elements_just_keys, elements_to_add[:tree.B_buffer])
+        self.assertEqual(tree_buffer_elements_just_keys, elements_to_add[tree.B_buffer:])
 
     def test_perfectly_filled_tree_buffer_two_blocks(self):
         tree = self.create_dummy_tree()
 
-        elements_to_add = [f'Element_{i}' for i in range(int(2 * tree.B))]
+        elements_to_add = [f'Element_{i}' for i in range(int(2 * tree.B_buffer))]
         for element in elements_to_add:
             tree.insert_to_tree(element)
 
@@ -59,8 +59,8 @@ class TestTreeBuffer(unittest.TestCase):
         buffer_one_just_keys = [ele.element for ele in first_buffer_elements]
         buffer_two_just_keys = [ele.element for ele in second_buffer_elements]
 
-        self.assertEqual(buffer_one_just_keys, elements_to_add[:tree.B])
-        self.assertEqual(buffer_two_just_keys, elements_to_add[tree.B:2*tree.B])
+        self.assertEqual(buffer_one_just_keys, elements_to_add[:tree.B_buffer])
+        self.assertEqual(buffer_two_just_keys, elements_to_add[tree.B_buffer:2 * tree.B_buffer])
         self.assertEqual([], tree.tree_buffer.elements)
 
 
@@ -70,4 +70,4 @@ class TestTreeBuffer(unittest.TestCase):
         M = 2 * 4096
         B = 1024
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)
