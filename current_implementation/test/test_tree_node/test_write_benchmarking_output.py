@@ -1,6 +1,6 @@
 import unittest
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 from current_implementation.test.is_proper_tree import assert_is_proper_tree
 """ Those aren't actual new unittests (kinda only what happens in test_big_test.py), but it's good for manually checking out the benchmark output."""
 
@@ -16,7 +16,7 @@ class BigTestsWithTracking(unittest.TestCase):
         tree.start_tracking_handler()
         biggest_int = tree.m * tree.B_buffer
         for i in range(biggest_int):
-            tree.insert_to_tree(create_string_from_int(i, biggest_int))
+            tree.insert_to_tree(create_string_from_int_biggest_number(i, biggest_int))
 
         assert_is_proper_tree(self, tree)
 
@@ -27,7 +27,7 @@ class BigTestsWithTracking(unittest.TestCase):
         self.assertFalse(root_node_before_delete.is_internal_node())
 
         for i in range(biggest_int):
-            tree.delete_from_tree(create_string_from_int(i, biggest_int))
+            tree.delete_from_tree(create_string_from_int_biggest_number(i, biggest_int))
 
         root_node_after_delete = load_node(tree.root_node_id)
         self.assertEqual(0, len(root_node_after_delete.children_ids))
@@ -39,7 +39,7 @@ class BigTestsWithTracking(unittest.TestCase):
         tree = self.create_dummy_tree()
         biggest_int = 20 * tree.B_buffer * tree.m
 
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         tree.start_tracking_handler()
         for element in elements:
@@ -62,7 +62,7 @@ class BigTestsWithTracking(unittest.TestCase):
         tree = self.create_dummy_tree()
         biggest_int = 200 * tree.B_buffer * tree.m
 
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         tree.start_tracking_handler()
         for element in elements:

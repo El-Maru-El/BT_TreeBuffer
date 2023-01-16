@@ -1,6 +1,6 @@
 import unittest
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 
 
 class TestTreeNode(unittest.TestCase):
@@ -41,14 +41,14 @@ class TestTreeNode(unittest.TestCase):
         for child_node in children_nodes:
             write_node(child_node)
 
-        split_keys = [create_string_from_int(100, biggest_int), create_string_from_int(200, biggest_int)]
+        split_keys = [create_string_from_int_biggest_number(100, biggest_int), create_string_from_int_biggest_number(200, biggest_int)]
         children_node_ids = [child_node.node_id for child_node in children_nodes]
 
         parent_node.children_ids = children_node_ids
         parent_node.handles = split_keys
 
         elements_int = [10, 40, 100, 150, 200, 300, biggest_int]
-        elements_str = [create_string_from_int(el_int, biggest_int) for el_int in elements_int]
+        elements_str = [create_string_from_int_biggest_number(el_int, biggest_int) for el_int in elements_int]
 
         buffer_elements = [BufferElement(el_str, Action.INSERT) for el_str in elements_str]
         left_elements = buffer_elements[:3]
@@ -77,9 +77,9 @@ class TestTreeNode(unittest.TestCase):
         # First leaf block:     All even numbers in interval    [0; 2 * B[
         # Second leaf block:    All even numbers in interval    [2 * B, 4 * B[
         # Sorted buffer ele:    All uneven numbers in interval  [0; 4 * B]
-        first_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(0, 2 * tree.B_buffer, 2)]
-        second_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(2 * tree.B_buffer, 4 * tree.B_buffer, 2)]
-        sorted_buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in range(1, 4 * tree.B_buffer + 1, 2)]
+        first_leaf_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(0, 2 * tree.B_buffer, 2)]
+        second_leaf_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(2 * tree.B_buffer, 4 * tree.B_buffer, 2)]
+        sorted_buffer_elements = [BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in range(1, 4 * tree.B_buffer + 1, 2)]
 
         quick_check_failure_message = 'You did not implement the input Leaf and Buffer Data as intended'
         self.assertEqual(len(first_leaf_elements), tree.B_buffer, quick_check_failure_message)
@@ -104,7 +104,7 @@ class TestTreeNode(unittest.TestCase):
         sorted_elements_before_writing = sorted(all_elements_before_unsorted)
 
         # Is node metadata correct?
-        expected_split_keys = [create_string_from_int(i, biggest_int) for i in [tree.B_buffer - 1, 2 * tree.B_buffer - 1, 3 * tree.B_buffer - 1]]
+        expected_split_keys = [create_string_from_int_biggest_number(i, biggest_int) for i in [tree.B_buffer - 1, 2 * tree.B_buffer - 1, 3 * tree.B_buffer - 1]]
         self.assertEqual(len(leaf_node.children_ids), 4)
         self.assertEqual(expected_split_keys, leaf_node.handles)
 
@@ -132,9 +132,9 @@ class TestTreeNode(unittest.TestCase):
         # First leaf block:     All even numbers in interval    [0; 2 * B[
         # Second leaf block:    All even numbers in interval    [2 * B, 4 * B[
         # Sorted buffer ele:    All numbers in interval         [0; 2.5 * B[
-        first_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(0, 2 * tree.B_buffer, 2)]
-        second_leaf_elements = [create_string_from_int(i, biggest_int) for i in range(2 * tree.B_buffer, 4 * tree.B_buffer, 2)]
-        sorted_buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in range(0, int(2.5 * tree.B_buffer))]
+        first_leaf_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(0, 2 * tree.B_buffer, 2)]
+        second_leaf_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(2 * tree.B_buffer, 4 * tree.B_buffer, 2)]
+        sorted_buffer_elements = [BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in range(0, int(2.5 * tree.B_buffer))]
 
         write_leaf_block(old_leaf_ids[0], first_leaf_elements)
         write_leaf_block(old_leaf_ids[1], second_leaf_elements)
@@ -146,16 +146,16 @@ class TestTreeNode(unittest.TestCase):
         leaf_node.merge_sorted_buffer_with_leaf_blocks(sorted_filepath)
 
         expected_split_keys_as_int = [tree.B_buffer - 1, 2 * tree.B_buffer - 1, int(3.5 * tree.B_buffer) - 2]
-        expected_split_keys = [create_string_from_int(i, biggest_int) for i in expected_split_keys_as_int]
+        expected_split_keys = [create_string_from_int_biggest_number(i, biggest_int) for i in expected_split_keys_as_int]
 
         # Is node metadata correct?
         self.assertEqual(4, len(leaf_node.children_ids))
         self.assertEqual(expected_split_keys, leaf_node.handles)
 
-        expected_first_leaf = [create_string_from_int(i, biggest_int) for i in range(tree.B_buffer)]
-        expected_second_leaf = [create_string_from_int(i, biggest_int) for i in range(tree.B_buffer, 2 * tree.B_buffer)]
-        expected_third_leaf = [create_string_from_int(i, biggest_int) for i in range(2 * tree.B_buffer, int(2.5 * tree.B_buffer))]
-        rest_elements = [create_string_from_int(i, biggest_int) for i in range(int(2.5 * tree.B_buffer), 4 * tree.B_buffer, 2)]
+        expected_first_leaf = [create_string_from_int_biggest_number(i, biggest_int) for i in range(tree.B_buffer)]
+        expected_second_leaf = [create_string_from_int_biggest_number(i, biggest_int) for i in range(tree.B_buffer, 2 * tree.B_buffer)]
+        expected_third_leaf = [create_string_from_int_biggest_number(i, biggest_int) for i in range(2 * tree.B_buffer, int(2.5 * tree.B_buffer))]
+        rest_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(int(2.5 * tree.B_buffer), 4 * tree.B_buffer, 2)]
         expected_third_leaf.extend(rest_elements[:tree.B_buffer // 2])
         expected_fourth_leaf = rest_elements[tree.B_buffer // 2:]
         reloaded_leaf_lists = [list(read_leaf_block_elements_as_deque(leaf_id)) for leaf_id in leaf_node.children_ids]
@@ -174,7 +174,7 @@ class TestTreeNode(unittest.TestCase):
         self.assertEqual(root_node.children_ids, [])
 
         biggest_int = tree.B_buffer
-        raw_elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        raw_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
         for raw_element in raw_elements:
             tree.insert_to_tree(raw_element)
 
@@ -191,7 +191,7 @@ class TestTreeNode(unittest.TestCase):
         root_node_id = tree.root_node_id
 
         biggest_int = 4 * tree.B_buffer
-        all_elements = [create_string_from_int(i, biggest_int) for i in range(4 * tree.B_buffer)]
+        all_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(4 * tree.B_buffer)]
         for element in all_elements:
             tree.insert_to_tree(element)
 
@@ -201,7 +201,7 @@ class TestTreeNode(unittest.TestCase):
         expected_4_block = all_elements[3 * tree.B_buffer: 4 * tree.B_buffer]
 
         # We should now have caused the root buffer to overfill, causing it to empty as a Leaf Node would
-        expected_split_keys = [create_string_from_int(i, biggest_int) for i in [tree.B_buffer - 1, 2 * tree.B_buffer - 1, 3 * tree.B_buffer - 1]]
+        expected_split_keys = [create_string_from_int_biggest_number(i, biggest_int) for i in [tree.B_buffer - 1, 2 * tree.B_buffer - 1, 3 * tree.B_buffer - 1]]
         root_node = load_node(root_node_id)
         self.assertFalse(root_node.is_internal_node())
         self.assertEqual(expected_split_keys, root_node.handles)

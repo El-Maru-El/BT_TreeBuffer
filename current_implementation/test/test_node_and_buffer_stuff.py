@@ -1,5 +1,5 @@
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 import unittest
 
 
@@ -12,7 +12,7 @@ class TestTreeBuffer(unittest.TestCase):
         tree = self.create_dummy_tree()
 
         biggest_int = tree.B_buffer
-        elements_to_add = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements_to_add = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
         for element in elements_to_add:
             tree.insert_to_tree(element)
 
@@ -29,7 +29,7 @@ class TestTreeBuffer(unittest.TestCase):
         tree = self.create_dummy_tree()
 
         biggest_int = int(1.5 * tree.B_buffer)
-        elements_to_add = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements_to_add = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
         for element in elements_to_add:
             tree.insert_to_tree(element)
 
