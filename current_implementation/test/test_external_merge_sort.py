@@ -1,7 +1,7 @@
 from current_implementation.new_buffer_tree import *
 from current_implementation.merge_sort import *
 from collections import deque
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 import unittest
 
 
@@ -27,7 +27,7 @@ class TestExternalMergeSort(unittest.TestCase):
         right_deque = deque()
 
         for i in range(self.max_elem_in_memory):
-            new_buffer_element = BufferElement(create_string_from_int(i, self.max_elem_in_memory), Action.INSERT)
+            new_buffer_element = BufferElement(create_string_from_int_biggest_number(i, self.max_elem_in_memory), Action.INSERT)
             if i % 2 == 0:
                 left_deque.append(new_buffer_element)
             else:
@@ -43,7 +43,7 @@ class TestExternalMergeSort(unittest.TestCase):
     def test_append_to_empty_sorted_file(self):
         sorted_file_elements = []
         for i in range(self.max_elem_in_memory):
-            new_buffer_element = BufferElement(create_string_from_int(i, self.max_elem_in_memory), Action.INSERT)
+            new_buffer_element = BufferElement(create_string_from_int_biggest_number(i, self.max_elem_in_memory), Action.INSERT)
             sorted_file_elements.append(new_buffer_element)
 
         sorted_id = get_new_sorted_id()
@@ -59,7 +59,7 @@ class TestExternalMergeSort(unittest.TestCase):
         second_file_elements = []
         combined = []
         for i in range(self.max_elem_in_memory):
-            new_buffer_element = BufferElement(create_string_from_int(i, self.max_elem_in_memory), Action.INSERT)
+            new_buffer_element = BufferElement(create_string_from_int_biggest_number(i, self.max_elem_in_memory), Action.INSERT)
             combined.append(new_buffer_element)
             if i % 2:
                 first_file_elements.append(new_buffer_element)
@@ -87,19 +87,19 @@ class TestExternalMergeSort(unittest.TestCase):
         last_second_element = 3000
         last_element = 4000
         for i in range(num_first_elements):
-            new_buffer_element = BufferElement(create_string_from_int(i, last_element), Action.INSERT)
+            new_buffer_element = BufferElement(create_string_from_int_biggest_number(i, last_element), Action.INSERT)
             all_elements.append(new_buffer_element)
             first_file_elements.append(new_buffer_element)
         append_to_sorted_buffer_elements_file(node_id, first_sorted_id, first_file_elements)
 
         for i in range(num_first_elements, last_second_element):
-            new_buffer_element = BufferElement(create_string_from_int(i, last_element), Action.INSERT)
+            new_buffer_element = BufferElement(create_string_from_int_biggest_number(i, last_element), Action.INSERT)
             all_elements.append(new_buffer_element)
             second_file_elements.append(new_buffer_element)
         append_to_sorted_buffer_elements_file(node_id, second_sorted_id, second_file_elements)
 
         for i in range(last_second_element, last_element):
-            new_buffer_element = BufferElement(create_string_from_int(i, last_element), Action.INSERT)
+            new_buffer_element = BufferElement(create_string_from_int_biggest_number(i, last_element), Action.INSERT)
             all_elements.append(new_buffer_element)
             third_file_elements.append(new_buffer_element)
         append_to_sorted_buffer_elements_file(node_id, third_sorted_id, third_file_elements)

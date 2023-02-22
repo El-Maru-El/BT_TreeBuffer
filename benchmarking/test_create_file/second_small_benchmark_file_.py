@@ -1,7 +1,7 @@
 import unittest
 from current_implementation.new_buffer_tree import *
 from bplus_tree.new_bplus_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 """ Those aren't actual new unittests (kinda only what happens in test_big_test.py), but it's good for manually checking out the benchmark output."""
 
 
@@ -15,7 +15,7 @@ class BigTestsWithTracking(unittest.TestCase):
         delete_start_ind = 500
         delete_stop_ind = 300
         biggest_int = 60000
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         # Buffer Tree:
         buffer_tree = self.create_buffer_tree()

@@ -1,5 +1,5 @@
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 import unittest
 
 
@@ -16,7 +16,7 @@ class TestNodeBuffer(unittest.TestCase):
 
         biggest_int = tree.B_buffer // 2
 
-        starting_buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in
+        starting_buffer_elements = [BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in
                                     range(biggest_int)]
 
         fake_node.add_elements_to_buffer(elements=starting_buffer_elements)
@@ -35,11 +35,11 @@ class TestNodeBuffer(unittest.TestCase):
 
         biggest_int = int(1.5 * tree.B_buffer)
         num_first_elements = tree.B_buffer // 2
-        starting_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in
+        starting_elements = [BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in
                              range(num_first_elements)]
         fake_node.add_elements_to_buffer(elements=starting_elements)
 
-        appending_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in
+        appending_elements = [BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in
                               range(num_first_elements, biggest_int)]
         fake_node.add_elements_to_buffer(elements=appending_elements)
 

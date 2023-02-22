@@ -17,7 +17,7 @@ class BufferTree:
         clean_up_and_initialize_resource_directories()
         # If no two separate amount of elements per Buffer are passed, assume the same size for both
         if B_leaf is None:
-            B_leaf = B_buffer
+            B_leaf = B_leaf
 
         self.M = M
         self.B_buffer = B_buffer
@@ -138,6 +138,7 @@ class BufferTree:
         self.tracking_handler.exit_leaf_buffer_emptying_mode()
 
     def handle_leaf_nodes_with_dummy_children(self):
+
         def load_parent_neighbor_left(node: TreeNode):
             loaded_parent_node = load_node(node.parent_id)
             is_left = True
@@ -652,6 +653,9 @@ class TreeNode:
         return new_list
 
     def read_leaf_block_elements_as_deque(self, consumed_child_counter):
+        if consumed_child_counter > len(self.children_ids):
+            raise ValueError("Gotcha, found the error....")
+
         if consumed_child_counter == len(self.children_ids):
             return None
         else:
@@ -714,7 +718,8 @@ class TreeNode:
 
             # Write neighbor
             write_node(neighbor_node)
-
+        # TODO Debug point :)
+        pass
         # If we still have DUMMY children left-over, we need another run of all of this
         if self.children_ids[-1] == DUMMY_STRING:
             if not len(self.children_ids) == self.min_amount_of_children():
@@ -753,6 +758,8 @@ class TreeNode:
 
         # If left node has dummy children, take them away and append them to right child
         while left_node.handles and left_node.handles[-1] == DUMMY_STRING:
+            if left_node.children_ids[-1] != DUMMY_STRING:
+                raise ValueError("Nope, wrongly configured!")
             del left_node.handles[-1]
             del left_node.children_ids[-1]
             right_node.handles.append(DUMMY_STRING)
@@ -798,6 +805,28 @@ class TreeNode:
         get_tracking_handler_instance().exit_merge_with_neighbor_mode()
 
     def steal_from_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
+        def validity_check():
+            tmp_tree = get_tree_instance()
+            for child_id in neighbor_node.children_ids:
+                if child_id == DUMMY_STRING:
+                    raise ValueError(f"Neighbor shouldn't have any DUMMYs!! neighbor {neighbor_node}, self node {self}, parent {parent_node}")
+            for split_key in neighbor_node.handles:
+                if split_key == DUMMY_STRING:
+                    raise ValueError(f"Neighbor shouldn't have any DUMMYs!! neighbor {neighbor_node}, self node {self}, parent {parent_node}")
+            if len(self.children_ids) < tmp_tree.a - 1:
+                raise ValueError("Too few children for self node: neighbor {neighbor_node}, self node {self}, parent {parent_node}")
+            if len(self.handles) != len(self.children_ids) - 1:
+                raise ValueError("Wrong amount of split-keys vs children for self node: neighbor {neighbor_node}, self node {self}, parent {parent_node}")
+            for i, child_id in enumerate(self.children_ids):
+                if i > 0:
+                    if self.handles[i - 1] == DUMMY_STRING and child_id != DUMMY_STRING or child_id == DUMMY_STRING and self.handles[i-1] != DUMMY_STRING:
+                        raise ValueError(f"Mismatching handles vs children for dummy! self node {self}")
+                if i < len(self.children_ids) - 1:
+                    if child_id == DUMMY_STRING and self.children_ids[i+1] != DUMMY_STRING:
+                        raise ValueError(f"Dummy children must always be at the end!!!! self node {self}")
+
+        # validity_check()
+
         # Only writes the stolen children's parent pointer
         tree = get_tree_instance()
         num_children_to_steal = tree.s
@@ -828,9 +857,13 @@ class TreeNode:
             neighbor_node.handles = neighbor_node.handles[num_children_to_steal:]
             neighbor_node.children_ids = neighbor_node.children_ids[num_children_to_steal:]
 
+        # TODO
+        # num_dummys, all_children_were_dummys = self.delete_dummies_return_how_many_and_whether_all_were_dummys()
+
+
         # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a - 1 + s children after merge and want at least a children in the end
-        max_amount_of_dummies_to_delete = tree.s - 1
-        self.delete_at_most_x_dummies(max_amount_of_dummies_to_delete)
+        # max_amount_of_dummies_to_delete = tree.s - 1
+        # self.delete_at_most_x_dummies(max_amount_of_dummies_to_delete)
 
         # We are right sibling node and ALL our children are DUMMY -> split-key stolen from parent must be overridden to DUMMY
         # If we are left sibling node and ALL our children DUMMY, they need to be appended at the END of the new children -> parent split key must be DUMMY as well, bc we had one more DUMMY child and than DUMMY split-key
@@ -858,6 +891,8 @@ class TreeNode:
         # Adapt parent
         parent_node.handles[split_key_index_in_parent] = stolen_split_key_to_parent
 
+        self.delete_dummys_but_keep_min_children()
+
         # Adapt stolen children's parent pointer (and make sure we're not trying to overwrite DUMMY childrens parent pointer)
         if self.is_internal_node():
             for stolen_node_id in stolen_children:
@@ -865,6 +900,8 @@ class TreeNode:
                     overwrite_parent_id(stolen_node_id, self.node_id)
 
         # If we still have dummy children, calling method has to take care of that
+
+        # validity_check()
 
         get_tracking_handler_instance().exit_steal_from_neighbor_mode()
 
@@ -896,22 +933,28 @@ class TreeNode:
             del self.handles[-1]
             del self.children_ids[-1]
 
-    def delete_at_most_x_dummies(self, x):
-        def validity_check():
-            if self.children_ids[-1] != self.handles[-1]:
-                raise ValueError(f"Trying to delete {x} children from node {self.node_id}, at most {counter} deletions to go, when encountering mismatch in DUMMY pointers:\n"
-                                 f"Children_ids: {self.children_ids}\nSplit-Keys: {self.handles}")
-
-        counter = x
-
-        if x <= 0:
-            raise ValueError(f"Trying to delete {x} dummy children from node {self.node_id}, x should be > 0")
-
-        while counter and DUMMY_STRING in [self.children_ids[-1], self.handles[-1]]:
-            validity_check()
-            del self.children_ids[-1]
-            del self.handles[-1]
-            counter -= 1
+    # def delete_at_most_x_dummies(self, x):
+    #     def validity_check():
+    #         # TODO Check
+    #         if self.is_root():
+    #             raise ValueError("Wtf this shouldn't be executed on the root node")
+    #         if len(self.handles) == 0:
+    #             raise ValueError(f"Trying to delete Dummy child but there's a mistake in node setup {self}")
+    #
+    #     validity_check()
+    #
+    #     counter = x
+    #
+    #     if x <= 0:
+    #         raise ValueError(f"Trying to delete {x} dummy children from node {self.node_id}, x should be > 0")
+    #
+    #     while counter and DUMMY_STRING in [self.children_ids[-1], self.handles[-1]]:
+    #         if self.children_ids[-1] != self.handles[-1]:
+    #             raise ValueError("Shouldn't happen, one of 'em is dummy string!")
+    #         del self.children_ids[-1]
+    #         if self.handles:
+    #             del self.handles[-1]
+    #         counter -= 1
 
     def root_node_is_too_small(self):
 
@@ -1123,13 +1166,19 @@ def read_leaf_block_elements_as_deque(leaf_id):
     get_tracking_handler_instance().enter_leaf_element_read_sub_mode()
 
     leaf_file_path = get_leaf_file_path_from_id(leaf_id)
+    elements = read_leaf_block_elements_as_deque_from_filepath(leaf_file_path)
+
+    get_tracking_handler_instance().exit_leaf_element_read_sub_mode(len(elements))
+
+    return elements
+
+
+def read_leaf_block_elements_as_deque_from_filepath(leaf_file_path):
     elements = deque()
     with open(leaf_file_path, 'r') as f:
         for line in f:
             # The line splitting [:-1] on action gets rid of the line break
             elements.append(line[:-1])
-
-    get_tracking_handler_instance().exit_leaf_element_read_sub_mode(len(elements))
 
     return elements
 
@@ -1151,20 +1200,12 @@ def get_tree_instance() -> BufferTree:
 
 
 def overwrite_parent_id(child_id, new_parent_id):
-    file_path = node_information_file_path_from_id(child_id)
 
     get_tracking_handler_instance().enter_overwrite_parent_id_sub_mode()
 
-    with open(file_path, "rb+") as f:
-        try:
-            f.seek(-2, os.SEEK_END)
-            while f.read(1) != b'\n':
-                f.seek(-2, os.SEEK_CUR)
-        except OSError as e:
-            raise IOError(f"Couldn't find last line in file {file_path}") from e
-
-        f.write(f'{new_parent_id}\n'.encode())
-        f.truncate()
+    node = load_node(child_id)
+    node.parent_id = new_parent_id
+    write_node(node)
 
     get_tracking_handler_instance().exit_overwrite_parent_id_sub_mode(1)
 

@@ -304,11 +304,7 @@ class BPlusTreeNode(AbstractNode):
         # Since we are not a leaf, all children have to adapt their parent pointer
 
         for child_id in new_left_neighbor_node.children:
-            # TODO Debug point 1
-            overwrite_parent_id(child_id, new_left_neighbor_node.node_id)
-            # moved_child_node = load_node(child_id, is_leaf=self.children_are_leaves())
-            # moved_child_node.parent_id = new_left_neighbor_node.node_id
-            # write_node(moved_child_node)
+            overwrite_parent_id(child_id, new_left_neighbor_node.node_id, is_leaf=self.children_are_leaves())
 
         write_node(new_left_neighbor_node)
         return new_left_neighbor_node, split_key_to_parent
@@ -341,11 +337,7 @@ class BPlusTreeNode(AbstractNode):
 
         parent_node.split_keys[parent_split_key_index] = split_key_to_parent
 
-        # TODO Debug point 2
-        overwrite_parent_id(stolen_child, self.node_id)
-        # stolen_child_node = load_node(stolen_child, is_leaf=self.is_leaf_node())
-        # stolen_child_node.parent_id = self.node_id
-        # write_node(stolen_child_node)
+        overwrite_parent_id(stolen_child, self.node_id, self.children_are_leaves())
 
         get_tracking_handler_instance().exit_steal_from_neighbor_mode()
 
@@ -374,12 +366,8 @@ class BPlusTreeNode(AbstractNode):
         del parent_node.children[neighbor_index_in_parent]
         del parent_node.split_keys[parent_split_key_index]
 
-        # TODO: Overwrite parent pointer only
         for stolen_child_node_id in neighbor_node.children:
-            overwrite_parent_id(stolen_child_node_id, self.node_id)
-            # stolen_child_node = load_node(stolen_child_node_id, is_leaf=self.is_leaf_node())
-            # stolen_child_node.parent_id = self.node_id
-            # write_node(stolen_child_node)
+            overwrite_parent_id(stolen_child_node_id, self.node_id, is_leaf=self.children_are_leaves())
 
         get_tracking_handler_instance().exit_merge_with_neighbor_mode()
 
@@ -523,21 +511,12 @@ def load_leaf(node_id) -> Leaf:
     return leaf_instance
 
 
-def overwrite_parent_id(child_id, new_parent_id):
-    file_path = get_file_path_for_node_id(child_id)
-
+def overwrite_parent_id(child_id, new_parent_id, is_leaf):
     get_tracking_handler_instance().enter_overwrite_parent_id_sub_mode()
 
-    with open(file_path, "rb+") as f:
-        try:
-            f.seek(-2, os.SEEK_END)
-            while f.read(1) != b'\n':
-                f.seek(-2, os.SEEK_CUR)
-        except OSError as e:
-            raise IOError(f"Couldn't find last line in file {file_path}") from e
-
-        f.write(f'{new_parent_id}\n'.encode())
-        f.truncate()
+    child = load_node(child_id, is_leaf)
+    child.parent_id = new_parent_id
+    write_node(child)
 
     get_tracking_handler_instance().exit_overwrite_parent_id_sub_mode(1)
 

@@ -1,6 +1,6 @@
 import unittest
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 
 
 class BasicTreeTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class BasicTreeTests(unittest.TestCase):
         biggest_int = tree.B_buffer // 2
 
         for i in range(biggest_int):
-            tree.insert_to_tree(create_string_from_int(i, biggest_int))
+            tree.insert_to_tree(create_string_from_int_biggest_number(i, biggest_int))
 
         root = tree.push_internal_buffer_to_root_return_root()
 
