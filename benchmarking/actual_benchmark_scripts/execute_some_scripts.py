@@ -15,6 +15,9 @@ def execute_all_benchmark_scripts():
             logger.exception(f'Benchmark {script.__name__} failed.')
             failed_ones.append(script.__name__)
 
+    if failed_ones:
+        print(f"Some scripts failed... {failed_ones}")
+
 
 if __name__ == '__main__':
     execute_all_benchmark_scripts()

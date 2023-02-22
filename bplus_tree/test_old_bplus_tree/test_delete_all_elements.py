@@ -1,6 +1,6 @@
 import unittest
 from bplus_tree.bplus_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 
 
 class TestDeleteFunctionality(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestDeleteFunctionality(unittest.TestCase):
 
         biggest_int = 500
 
-        key_value_pairs = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
+        key_value_pairs = [(i, create_string_from_int_biggest_number(i, biggest_int)) for i in range(biggest_int)]
 
         for k, v in key_value_pairs:
             tree.insert_to_tree(k, v)
@@ -28,7 +28,7 @@ class TestDeleteFunctionality(unittest.TestCase):
 
         biggest_int = 500
 
-        key_value_pairs = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
+        key_value_pairs = [(i, create_string_from_int_biggest_number(i, biggest_int)) for i in range(biggest_int)]
 
         for k, v in key_value_pairs:
             tree.insert_to_tree(k, v)
@@ -43,7 +43,7 @@ class TestDeleteFunctionality(unittest.TestCase):
 
         biggest_int = 500
 
-        key_value_pairs = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
+        key_value_pairs = [(i, create_string_from_int_biggest_number(i, biggest_int)) for i in range(biggest_int)]
 
         for k, v in key_value_pairs:
             tree.insert_to_tree(k, v)
