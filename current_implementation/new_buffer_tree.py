@@ -805,6 +805,7 @@ class TreeNode:
         get_tracking_handler_instance().exit_merge_with_neighbor_mode()
 
     def steal_from_neighbor(self, parent_node, neighbor_node, is_left_neighbor):
+        # Since linear check, takes some computing time... Only good for debugging or running tests
         def validity_check():
             tmp_tree = get_tree_instance()
             for child_id in neighbor_node.children_ids:
