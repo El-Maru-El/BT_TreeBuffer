@@ -1,6 +1,6 @@
 import unittest
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 
 
 class BufferFlushTest(unittest.TestCase):
@@ -9,7 +9,7 @@ class BufferFlushTest(unittest.TestCase):
 
     def test_a_single_element(self):
         tree = self.create_dummy_tree()
-        only_element = create_string_from_int(1, 1)
+        only_element = create_string_from_int_biggest_number(1, 1)
         tree.insert_to_tree(only_element)
         tree.flush_all_buffers()
 
@@ -24,7 +24,7 @@ class BufferFlushTest(unittest.TestCase):
 
     def test_add_and_delete_single_element(self):
         tree = self.create_dummy_tree()
-        only_element = create_string_from_int(1, 1)
+        only_element = create_string_from_int_biggest_number(1, 1)
         tree.insert_to_tree(only_element)
         tree.delete_from_tree(only_element)
         tree.flush_all_buffers()
@@ -40,4 +40,4 @@ class BufferFlushTest(unittest.TestCase):
         B = 1024
         # m = 8
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)

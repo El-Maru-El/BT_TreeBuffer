@@ -1,6 +1,6 @@
 import unittest
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 
 
 class TestTreeNodeSplit(unittest.TestCase):
@@ -55,4 +55,4 @@ class TestTreeNodeSplit(unittest.TestCase):
         B = 1024
         # m = 8
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)

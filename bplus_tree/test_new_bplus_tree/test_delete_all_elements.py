@@ -1,6 +1,6 @@
 import unittest
 from bplus_tree.new_bplus_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 from get_all_leaf_elements import get_all_leaf_elements
 
 
@@ -14,7 +14,7 @@ class TestDeleteFunctionality(unittest.TestCase):
 
         biggest_int = 500
 
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         for ele in elements:
             tree.insert_to_tree(ele)
@@ -29,7 +29,7 @@ class TestDeleteFunctionality(unittest.TestCase):
 
         biggest_int = 500
 
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         for ele in elements:
             tree.insert_to_tree(ele)
@@ -44,7 +44,7 @@ class TestDeleteFunctionality(unittest.TestCase):
 
         biggest_int = 500
 
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         for ele in elements:
             tree.insert_to_tree(ele)

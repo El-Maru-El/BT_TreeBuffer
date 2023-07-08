@@ -1,5 +1,5 @@
 from current_implementation.new_buffer_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 import unittest
 
 
@@ -35,9 +35,9 @@ class TestNodeBufferEmptying(unittest.TestCase):
 
     def test_partially_filled_buffer(self):
         tree = self.create_dummy_tree()
-        biggest_int = tree.B
+        biggest_int = tree.B_buffer
         first_split_key_int, second_split_key_int, third_split_key = 100, 200, 300
-        split_keys = [create_string_from_int(first_split_key_int, biggest_int), create_string_from_int(second_split_key_int, biggest_int), create_string_from_int(third_split_key, biggest_int)]
+        split_keys = [create_string_from_int_biggest_number(first_split_key_int, biggest_int), create_string_from_int_biggest_number(second_split_key_int, biggest_int), create_string_from_int_biggest_number(third_split_key, biggest_int)]
         fake_children_nodes = [TreeNode(is_internal_node=True, parent_id=tree.root_node_id), TreeNode(is_internal_node=True, parent_id=tree.root_node_id),
                                TreeNode(is_internal_node=True, parent_id=tree.root_node_id), TreeNode(is_internal_node=True, parent_id=tree.root_node_id)]
         for child_node in fake_children_nodes:
@@ -46,7 +46,7 @@ class TestNodeBufferEmptying(unittest.TestCase):
         children_node_ids = [node.node_id for node in fake_children_nodes]
         elements_int = [30, 300, 220, 40, 250]
 
-        buffer_elements = [BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in elements_int]
+        buffer_elements = [BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in elements_int]
         sorted_buffer_elements = sorted(buffer_elements, key=lambda x: x.element)
 
         root_node = load_node(tree.root_node_id)
@@ -69,16 +69,16 @@ class TestNodeBufferEmptying(unittest.TestCase):
 
     def test_overfull_internal_buffer_leading_to_full_internal_child_node(self):
         tree = self.create_dummy_tree()
-        biggest_int = tree.m * tree.B
-        buffer_elements = deque([BufferElement(create_string_from_int(i, biggest_int), Action.INSERT) for i in reversed(range(biggest_int))])
+        biggest_int = tree.m * tree.B_buffer
+        buffer_elements = deque([BufferElement(create_string_from_int_biggest_number(i, biggest_int), Action.INSERT) for i in reversed(range(biggest_int))])
 
         buffer_elements_sorted = sorted(buffer_elements, key=lambda x: x.element)
 
-        parent_node = TreeNode(is_internal_node=True, handles=[create_string_from_int(biggest_int + 1, biggest_int)])
+        parent_node = TreeNode(is_internal_node=True, handles=[create_string_from_int_biggest_number(biggest_int + 1, biggest_int)])
         elements_in_block = []
         while buffer_elements:
             elements_in_block.append(buffer_elements.popleft())
-            if len(elements_in_block) == tree.B:
+            if len(elements_in_block) == tree.B_buffer:
                 parent_node.add_elements_to_buffer(elements_in_block)
 
         if elements_in_block:
@@ -102,4 +102,4 @@ class TestNodeBufferEmptying(unittest.TestCase):
         M = 2 * 4096
         B = 1024
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)

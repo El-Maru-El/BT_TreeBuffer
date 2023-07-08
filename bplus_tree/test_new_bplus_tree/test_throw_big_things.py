@@ -1,6 +1,6 @@
 import unittest
 from bplus_tree.new_bplus_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 from get_all_leaf_elements import get_all_leaf_elements
 
 
@@ -12,7 +12,7 @@ class TestALotOfAction(unittest.TestCase):
     def test_insert_few_elements(self):
         tree = BPlusTree(order=8)
         biggest_int = 8
-        input_elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        input_elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         for ele in input_elements:
             tree.insert_to_tree(ele)
@@ -24,7 +24,7 @@ class TestALotOfAction(unittest.TestCase):
     def test_insert_many_elements_ascending(self):
         tree = BPlusTree(order=100)
         biggest_int = 1000
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         for ele in elements:
             tree.insert_to_tree(ele)
@@ -40,7 +40,7 @@ class TestALotOfAction(unittest.TestCase):
 
         upper_ind = lower_ind = biggest_int // 2
 
-        elements_sorted = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements_sorted = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         while upper_ind < len(elements_sorted) or lower_ind >= 0:
             if upper_ind < len(elements_sorted):
@@ -64,7 +64,7 @@ class TestALotOfAction(unittest.TestCase):
         upper_ind = biggest_int - 1
         lower_ind = 0
 
-        elements_sorted = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements_sorted = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         while lower_ind <= upper_ind:
             if upper_ind < len(elements_sorted):
@@ -87,7 +87,7 @@ class TestALotOfAction(unittest.TestCase):
 
         upper_ind = lower_ind = biggest_int // 2
 
-        elements_sorted = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements_sorted = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         while upper_ind < len(elements_sorted) or lower_ind >= 0:
             if upper_ind < len(elements_sorted):
@@ -108,13 +108,13 @@ class TestALotOfAction(unittest.TestCase):
         tree = BPlusTree(100)
 
         biggest_int = 10000
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         for ele in elements:
             tree.insert_to_tree(ele)
 
         ints_to_be_remove = [1, 4, 20, 300, 4000, 5734, 2387, 9748, 4323]
-        elements_to_be_removed = [create_string_from_int(i, biggest_int) for i in ints_to_be_remove]
+        elements_to_be_removed = [create_string_from_int_biggest_number(i, biggest_int) for i in ints_to_be_remove]
 
         expected_values = [ele for ele in elements if ele not in elements_to_be_removed]
 

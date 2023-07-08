@@ -1,7 +1,7 @@
 import unittest
 from bplus_tree.bplus_tree import BPlusTree, BPlusTreeNode, write_node, load_node
 from bplus_tree.bplus_helpers import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 
 
 class TestSplit(unittest.TestCase):
@@ -87,7 +87,7 @@ class TestSplit(unittest.TestCase):
         tree = BPlusTree(order=order)
         biggest_int = 4
         # Since we have one Dummy Child, it will split here
-        elements = [(i, create_string_from_int(i, biggest_int)) for i in range(biggest_int)]
+        elements = [(i, create_string_from_int_biggest_number(i, biggest_int)) for i in range(biggest_int)]
         for k, v in elements:
             tree.insert_to_tree(k, v)
 

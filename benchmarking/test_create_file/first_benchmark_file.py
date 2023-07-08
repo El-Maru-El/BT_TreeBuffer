@@ -1,7 +1,7 @@
 import unittest
 from current_implementation.new_buffer_tree import *
 from bplus_tree.new_bplus_tree import *
-from current_implementation.create_comparable_string import create_string_from_int
+from current_implementation.create_comparable_string import create_string_from_int_biggest_number
 """ Those aren't actual new unittests (kinda only what happens in test_big_test.py), but it's good for manually checking out the benchmark output."""
 
 
@@ -12,15 +12,15 @@ class BigTestsWithTracking(unittest.TestCase):
     def def_create_buffer_tree_benchmark(self, benchmark_name):
 
         tree = self.create_buffer_tree()
-        biggest_int = 200 * tree.B * tree.m
+        biggest_int = 200 * tree.B_buffer * tree.m
 
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         tree.start_tracking_handler()
         for element in elements:
             tree.insert_to_tree(element)
 
-        for element in elements[tree.B * 10:tree.B * 45]:
+        for element in elements[tree.B_buffer * 10:tree.B_buffer * 45]:
             tree.delete_from_tree(element)
 
         tree.flush_all_buffers()
@@ -32,14 +32,13 @@ class BigTestsWithTracking(unittest.TestCase):
         delete_start_ind = 10240
         delete_stop_ind = 46080
         biggest_int = 1638400
-        elements = [create_string_from_int(i, biggest_int) for i in range(biggest_int)]
+        elements = [create_string_from_int_biggest_number(i, biggest_int) for i in range(biggest_int)]
 
         # Buffer Tree:
         buffer_tree = self.create_buffer_tree()
         b_plus_tree = self.create_bplus_tree()
 
-        # trees = [buffer_tree, b_plus_tree]
-        trees = [b_plus_tree]
+        trees = [buffer_tree, b_plus_tree]
 
         for tree in trees:
             tree.start_tracking_handler()
@@ -60,7 +59,7 @@ class BigTestsWithTracking(unittest.TestCase):
         B = 1024
         # m = 8
 
-        return BufferTree(M=M, B=B)
+        return BufferTree(M=M, B_buffer=B)
 
     @staticmethod
     def create_bplus_tree():
