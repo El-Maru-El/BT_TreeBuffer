@@ -87,13 +87,16 @@ class BPlusTree:
         self.b = order
         self.a = math.ceil(order / 2)
 
+
         # if no max_leaf_size is provided, it assumes the same amount of records for a leaf as a node is allowed to have children
         if max_leaf_size is None:
             max_leaf_size = self.b
         min_leaf_size = math.ceil(max_leaf_size / 2)
 
         self.min_leaf_size = min_leaf_size
+
         self.max_leaf_size = max_leaf_size
+        self.min_leaf_size = math.ceil(max_leaf_size / 2)
 
         # Starts as disabled, must be enabled. If disabled and calls are made to the tracking Handler, the tracking Handler won't do anything
         self.tracking_handler = TreeTrackingHandler()
@@ -118,7 +121,7 @@ class BPlusTree:
     def insert_to_tree(self, ele):
         self.tracking_handler.enter_insert_to_tree_mode()
 
-        root_node = load_node(self.root_node_id, is_leaf=self.root_node_type == NodeType.LEAF)
+        root_node = self.load_root()
         leaf = self.find_leaf_for_element_iteratively(root_node, ele)
         leaf.leaf_insert_key_value(ele)
         if len(leaf.children) > self.b:
