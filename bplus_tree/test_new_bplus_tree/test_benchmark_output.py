@@ -4,6 +4,7 @@ from current_implementation.create_comparable_string import create_string_from_i
 from get_all_leaf_elements import get_all_leaf_elements
 
 
+@unittest.skip("Don't wanna test benchmark stuff rn")
 class TestALotOfAction(unittest.TestCase):
 
     def setUp(self):

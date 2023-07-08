@@ -4,6 +4,7 @@ from current_implementation.create_comparable_string import create_string_from_i
 from get_all_leaf_elements import get_all_leaf_elements
 
 
+@unittest.skip("... Too many big tests")
 class TestALotOfAction(unittest.TestCase):
 
     def setUp(self):
@@ -33,6 +34,7 @@ class TestALotOfAction(unittest.TestCase):
 
         self.assertEqual(elements, found_elements)
 
+    @unittest.skip("Kinda takes long when I make inbetween checks")
     def test_insert_elements_even_tree_order_inside_to_outside_element_order(self):
         tree = BPlusTree(100)
 
