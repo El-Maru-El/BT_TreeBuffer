@@ -4,6 +4,7 @@ from current_implementation.create_comparable_string import create_string_from_i
 from current_implementation.new_buffer_tree import *
 from current_implementation.test.is_proper_tree import assert_is_proper_tree
 from current_implementation.constants_and_helpers import BROKEN_LEAVES_DIR
+from current_implementation.test.get_all_leaf_elements import get_all_leaf_elements_in_sorted_list
 import random
 
 byte_size = 10
@@ -40,6 +41,8 @@ class TestRandomizedSequences(unittest.TestCase):
 
         buffer_tree.flush_all_buffers()
         assert_is_proper_tree(self, buffer_tree)
+        elements_in_tree = get_all_leaf_elements_in_sorted_list(buffer_tree)
+        self.assertEqual(expected_elements_list, elements_in_tree)
 
     def test_several_randomised_insert_and_del_sequences(self):
         num_tests = 10
