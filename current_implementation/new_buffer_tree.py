@@ -511,6 +511,8 @@ class TreeNode:
                     elif leaf_element > buffer_element.element:
                         if buffer_element.action == Action.INSERT:
                             new_leaf_block_elements.append(sorted_buffer_elements.popleft().element)
+                        else:
+                            sorted_buffer_elements.popleft()
                         # Else it's a "delete" and element should not be appended
                     else:
                         old_leaf_block_elements.popleft()

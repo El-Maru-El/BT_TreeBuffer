@@ -4,7 +4,6 @@ import time
 from pathlib import Path
 import shutil
 
-
 WORKING_DIR = os.path.dirname(current_implementation.__file__)
 RESOURCES_DIR = os.path.join(WORKING_DIR, 'resource_data')
 NODES_DIR = os.path.join(RESOURCES_DIR, 'nodes_collection')
@@ -14,9 +13,13 @@ NODE_INFORMATION_FILE_STRING = 'data.txt'
 BLOCK_STRING = 'block_'
 LEAF_STRING = 'leaf_'
 SORTED_STRING = 'sorted_'
+# Broken leaves dir is only for debugging purposes
+BROKEN_LEAVES_DIR = os.path.join(WORKING_DIR, 'broken_leaves')
+
 # TODO Which file extension to use? CSV? TXT?
 FILE_EXTENSION = ''
 DUMMY_STRING = 'DUMMY'
+
 
 node_counter = 0
 
