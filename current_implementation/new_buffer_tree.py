@@ -511,6 +511,8 @@ class TreeNode:
                     elif leaf_element > buffer_element.element:
                         if buffer_element.action == Action.INSERT:
                             new_leaf_block_elements.append(sorted_buffer_elements.popleft().element)
+                        else:
+                            sorted_buffer_elements.popleft()
                         # Else it's a "delete" and element should not be appended
                     else:
                         old_leaf_block_elements.popleft()
@@ -718,8 +720,6 @@ class TreeNode:
 
             # Write neighbor
             write_node(neighbor_node)
-        # TODO Debug point :)
-        pass
         # If we still have DUMMY children left-over, we need another run of all of this
         if self.children_ids[-1] == DUMMY_STRING:
             if not len(self.children_ids) == self.min_amount_of_children():
@@ -800,7 +800,7 @@ class TreeNode:
         if len(parent_node.children_ids) < parent_node.min_amount_of_children():
             tree.node_to_steal_or_merge_queue.appendleft(parent_node.node_id)
 
-        # Neighbor node will be deleted in super method anyway, no need to change the neighbor node instance
+        # Neighbor node will be deleted in calling method anyway, no need to change the neighbor node instance
 
         get_tracking_handler_instance().exit_merge_with_neighbor_mode()
 
@@ -818,6 +818,9 @@ class TreeNode:
                 raise ValueError("Too few children for self node: neighbor {neighbor_node}, self node {self}, parent {parent_node}")
             if len(self.handles) != len(self.children_ids) - 1:
                 raise ValueError("Wrong amount of split-keys vs children for self node: neighbor {neighbor_node}, self node {self}, parent {parent_node}")
+            if len(neighbor_node.children_ids) < get_tree_instance().a + get_tree_instance().s:
+                raise ValueError(f"Trying to steal more children from neighbors than it has: s: {tree.s}, neighbor_node: {neighbor_node}")
+
             for i, child_id in enumerate(self.children_ids):
                 if i > 0:
                     if self.handles[i - 1] == DUMMY_STRING and child_id != DUMMY_STRING or child_id == DUMMY_STRING and self.handles[i-1] != DUMMY_STRING:
@@ -850,17 +853,13 @@ class TreeNode:
             stolen_split_keys_to_self = neighbor_node.handles[-num_children_to_steal + 1:]
             stolen_children = neighbor_node.children_ids[-num_children_to_steal:]
             neighbor_node.handles = neighbor_node.handles[:-num_children_to_steal]
-            neighbor_node.children_ids = self.children_ids[:-num_children_to_steal]
+            neighbor_node.children_ids = neighbor_node.children_ids[:-num_children_to_steal]
         else:
             stolen_split_key_to_parent = neighbor_node.handles[num_children_to_steal]
             stolen_split_keys_to_self = neighbor_node.handles[:num_children_to_steal - 1]
             stolen_children = neighbor_node.children_ids[:num_children_to_steal]
             neighbor_node.handles = neighbor_node.handles[num_children_to_steal:]
             neighbor_node.children_ids = neighbor_node.children_ids[num_children_to_steal:]
-
-        # TODO
-        # num_dummys, all_children_were_dummys = self.delete_dummies_return_how_many_and_whether_all_were_dummys()
-
 
         # Delete dummy children if we have some. Delete at most s - 1 dummies, since we have a - 1 + s children after merge and want at least a children in the end
         # max_amount_of_dummies_to_delete = tree.s - 1
@@ -933,29 +932,6 @@ class TreeNode:
             validity_check()
             del self.handles[-1]
             del self.children_ids[-1]
-
-    # def delete_at_most_x_dummies(self, x):
-    #     def validity_check():
-    #         # TODO Check
-    #         if self.is_root():
-    #             raise ValueError("Wtf this shouldn't be executed on the root node")
-    #         if len(self.handles) == 0:
-    #             raise ValueError(f"Trying to delete Dummy child but there's a mistake in node setup {self}")
-    #
-    #     validity_check()
-    #
-    #     counter = x
-    #
-    #     if x <= 0:
-    #         raise ValueError(f"Trying to delete {x} dummy children from node {self.node_id}, x should be > 0")
-    #
-    #     while counter and DUMMY_STRING in [self.children_ids[-1], self.handles[-1]]:
-    #         if self.children_ids[-1] != self.handles[-1]:
-    #             raise ValueError("Shouldn't happen, one of 'em is dummy string!")
-    #         del self.children_ids[-1]
-    #         if self.handles:
-    #             del self.handles[-1]
-    #         counter -= 1
 
     def root_node_is_too_small(self):
 
@@ -1186,7 +1162,10 @@ def read_leaf_block_elements_as_deque_from_filepath(leaf_file_path):
 
 def write_leaf_block(leaf_id, elements):
     leaf_file_path = get_leaf_file_path_from_id(leaf_id)
+    write_leaf_elements_to_file_path(leaf_file_path, elements)
 
+
+def write_leaf_elements_to_file_path(leaf_file_path, elements):
     get_tracking_handler_instance().enter_leaf_element_write_sub_mode()
 
     with open(leaf_file_path, 'w') as f:

@@ -37,9 +37,9 @@ class TestRandomisedInsert(TestCase):
         buffer_tree = create_buffer_tree()
         bpl_tree = create_bplus_tree()
 
-        # insert_seq, del_seq = create_insert_and_delete_sequence()
-        insert_seq = read_leaf_block_elements_as_deque_from_filepath(insert_seq_file_path)
-        del_seq = read_leaf_block_elements_as_deque_from_filepath(delete_seq_file_path)
+        insert_seq, del_seq = create_insert_and_delete_sequence()
+        # insert_seq = read_leaf_block_elements_as_deque_from_filepath(insert_seq_file_path)
+        # del_seq = read_leaf_block_elements_as_deque_from_filepath(delete_seq_file_path)
 
         # write_leaf_block(FIND_INSERT_AGAIN, insert_seq)
         # write_leaf_block(FIND_DELETE_AGAIN, del_seq)
@@ -146,6 +146,7 @@ def create_insert_sequence(current_ints_list: list):
 
 def create_buffer_tree():
     buffer_tree = BufferTree(B_buffer=41, M=349)
+    # -> (a, b) = (2, 8)
     return buffer_tree
 
 

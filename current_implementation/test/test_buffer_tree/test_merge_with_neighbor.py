@@ -112,6 +112,79 @@ class BasicTreeTests(unittest.TestCase):
         self.assertEqual(expected_merge_handles, left_neighbor.handles)
         self.assertEqual(expected_merge_children_ids, left_neighbor.children_ids)
 
+    def test_right_neighbor_all_dummy_children(self):
+        # Note: Theoretically the children should be pointers to Leaf-Blocks. This is only for testing purposes
+
+        # Create tree
+        tree = self.create_dummy_tree()
+        parent_node = TreeNode(is_internal_node=True)
+        # Create left neighbor (a-1 children)
+        # a - 1 = 3 -> 3 children for left node
+        left_children = ["A", "B", "C"]
+        left_split_keys = ["00", "01"]
+        left_node = TreeNode(is_internal_node=False, handles=left_split_keys, children=left_children, parent_id=parent_node.node_id)
+
+        # Create right neighbor
+        right_children = [DUMMY_STRING for _ in range(tree.a)]
+        right_split_keys = [DUMMY_STRING for _ in range(tree.a-1)]
+        right_node = TreeNode(is_internal_node=False, handles=right_split_keys, children=right_children, parent_id=parent_node.node_id)
+
+        # Expected Values
+        expected_left_children = left_children + [DUMMY_STRING]
+        expected_left_split_keys = left_split_keys + [DUMMY_STRING]
+
+        # Set correct parent pointer to children and stuff
+        parent_node.handles = ['HELLO']
+        parent_node.children_ids = [left_node.node_id, right_node.node_id]
+
+        # Merge the Leaf Nodes
+        left_node.merge_with_neighbor(parent_node, neighbor_node=right_node, is_left_neighbor=False)
+
+        # Validate that they are correct
+        #   Validate left node
+        self.assertEqual(expected_left_children, left_node.children_ids)
+        self.assertEqual(expected_left_split_keys, left_node.handles)
+
+        #   Validate parent node
+        self.assertEqual([left_node.node_id], parent_node.children_ids)
+        self.assertEqual([], parent_node.handles)
+
+    def test_left_neighbor_all_dummy_children(self):
+        # Note: Theoretically the children should be pointers to Leaf-Blocks. This is only for testing purposes
+
+        # Create tree
+        tree = self.create_dummy_tree()
+        parent_node = TreeNode(is_internal_node=True)
+        # Create right neighbor (a-1 children)
+        # a - 1 = 3 -> 3 children for left node
+        right_children = ["A", "B", "C"]
+        right_split_keys = ["00", "01"]
+        right_node = TreeNode(is_internal_node=False, handles=right_split_keys, children=right_children, parent_id=parent_node.node_id)
+
+        # Create right neighbor
+        left_children = [DUMMY_STRING for _ in range(tree.a)]
+        left_split_keys = [DUMMY_STRING for _ in range(tree.a - 1)]
+        left_node = TreeNode(is_internal_node=False, handles=left_split_keys, children=left_children, parent_id=parent_node.node_id)
+
+        # Expected Values
+        expected_right_children = right_children + [DUMMY_STRING]
+        expected_right_split_keys = right_split_keys + [DUMMY_STRING]
+
+        # Set correct parent pointer to children and stuff
+        parent_node.handles = ['HELLO', 'X_Handle']
+        parent_node.children_ids = [left_node.node_id, right_node.node_id, 'X_Child']
+
+        # Merge the Leaf Nodes
+        right_node.merge_with_neighbor(parent_node, neighbor_node=left_node, is_left_neighbor=True)
+
+        # Validate that they are correct
+        #   Validate left node
+        self.assertEqual(expected_right_children, right_node.children_ids)
+        self.assertEqual(expected_right_split_keys, right_node.handles)
+
+        #   Validate parent node
+        self.assertEqual([right_node.node_id, 'X_Child'], parent_node.children_ids)
+        self.assertEqual(['X_Handle'], parent_node.handles)
 
 
     @staticmethod
