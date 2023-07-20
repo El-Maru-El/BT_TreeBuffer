@@ -29,7 +29,7 @@ class TestRandomizedSequences(unittest.TestCase):
         insert_mode = True
 
         for (idx, sequence) in enumerate(alternating_ins_del_sequences):
-            print(f'Executing {idx+1}th sequence. Insert Mode: {insert_mode}')
+            # print(f'Executing {idx+1}th sequence. Insert Mode: {insert_mode}')
             if insert_mode:
                 for el_idx, element in enumerate(sequence):
                     buffer_tree.insert_to_tree(element)
@@ -47,7 +47,7 @@ class TestRandomizedSequences(unittest.TestCase):
     def test_several_randomised_insert_and_del_sequences(self):
         num_tests = 10
         for i in range(num_tests):
-            print(f'Execute {i+1}th out of {num_tests} randomised tests')
+            # print(f'Execute {i+1}th out of {num_tests} randomised tests')
             self.execute_randomised_test()
 
     @staticmethod
