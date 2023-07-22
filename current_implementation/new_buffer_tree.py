@@ -23,9 +23,15 @@ class BufferTree:
         self.B_buffer = B_buffer
         self.B_leaf = B_leaf
         m = M // B_buffer
+
+        # This block will simply round m down so that is dividable by 4 and all the maths still apply :-)
+        rest = m % 4
+        m = m - rest
+
         if m % 4 != 0:
             raise ValueError('m = lowerbound(M/B) is not dividable by four. '
                              'This is required to calculate a and b for the underlying a-b-tree Structure.')
+
         self.m = m
         self.b = m
         self.a = m // 4
